@@ -8,7 +8,7 @@ const LoginProvider = function({ children }) {
     return <LoginContext.Provider
     value={{
         isAuthenticated,
-        setIsAuthenticated
+        setIsAuthenticated,
     }}>
         {children}
     </LoginContext.Provider>

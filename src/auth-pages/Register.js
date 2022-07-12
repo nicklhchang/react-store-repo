@@ -1,16 +1,14 @@
 import React, { useState,useContext,useEffect } from 'react';
 import axios from 'axios';
-import { useLoginContext } from '../loginContext';
-// this does not achieve anything when logging in/registering; no credentials
-// but will be needed when making get requests for dashboard; unique to each user
-// EDIT:this is in fact needed to set cookie in browser
+import { useNavigate } from 'react-router-dom';
+// needed to set cookie in browser, then in dashboard needed to send cookie with axios requests
 axios.defaults.withCredentials = true; // always send cookie to backend because passport wants
 
 const Login = function() {
+  let navigate = useNavigate();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [email, setEmail] = useState('');
-  const { isAuthenticated,setIsAuthenticated } = useLoginContext();
 
   const submitRegisterCredentials = async function(event) {
     event.preventDefault();
@@ -27,6 +25,13 @@ const Login = function() {
         password:password
       });
       console.log(response);
+      if (response.data.newlyRegisteredMember) {
+        navigate('/dashboard', {
+          state:{
+            justAuthenticated:true
+          }
+        });
+      }
     } catch (error) {
       console.log(error);
     }

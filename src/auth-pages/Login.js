@@ -1,9 +1,7 @@
-import React, { useState,useContext,useEffect } from 'react';
+import React, { useState,useContext,useEffect,useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-// import { useLoginContext } from '../loginContext';
-// this does not achieve anything when logging in/registering; no credentials
-// but will be needed when making get requests for dashboard; unique to each user
-// EDIT:this is in fact needed to set cookie in browser
+// needed to set cookie in browser, then in dashboard needed to send cookie with axios requests
 axios.defaults.withCredentials = true; // always send cookie to backend because passport wants
 
 const Login = function() {
@@ -14,38 +12,50 @@ const Login = function() {
   a conditional inside useEffect and functions.
 
   one way to get around late state update is to not use state, just check response.data....
+  instead of setIsAuthenticated(response.data....)
+
+  useEffect() runs twice intentionally in StrictMode, making two axios requests seems inevitable
+  because both times useEffect() runs exactly the same; states do not change between the two renders 
+  (cannot alter states to make request first time and no request second time)
+  (consistency picks up any bugs during dev). in prod each component only renders once, so this not an issue.
+  so in prod won't make two http get requests to check auth status
   */
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-//   const { isAuthenticated,setIsAuthenticated } = useLoginContext();
-  
-//   const [temp, setTemp] = useState(false);
+  // const [temp, setTemp] = useState(false);
 
-  useEffect(() => {
-    // on first render of this route, check if already have active cookie
+  let navigate = useNavigate();
+  // just being a bit fancy and using useCallback instead of doing axios get request in useEffect
+  const fetchAuthStatus = useCallback(async function() {
+    // on first render of this route, check if already have active cookie, if so redirect straight to dashboard
     // btw, useEffect does not like async await
-    axios.get('http://localhost:8000/api/v1/auth/loginStatus')
-      .then(function(response) {
-        console.log(response.data);
-        // isAuthenticated only seems to kick in after useEffect runs
-        // setIsAuthenticated(response.data.alreadyAuthenticated);
-        // console.log(`get:${isAuthenticated}`)
-        if (response.data.alreadyAuthenticated) {
-          // navigating
-        }
-      })
-      .catch(function(error) {
-        console.log(error);
-      });
+    axios.get('http://localhost:8000/api/v1/auth/login-status')
+    .then(function(response) {
+      if (response.data.alreadyAuthenticated) {
+        // navigate to dashboard and somehow pass prop like justAuthenticated:true
+        navigate('/dashboard',{
+          state:{
+            justAuthenticated:true
+          }
+        });
+      }
+    })
+    .catch(function(error) {
+      console.log(error);
+    });
   }, []);
 
-//   useEffect(() => {
-//     let test = setTimeout(() => {
-//         setTemp(!temp);
-//         console.log(isAuthenticated);
-//     },500);
-//     return () => {clearTimeout(test);}
-//   },[temp]);
+  useEffect(() => {
+    fetchAuthStatus();
+  }, [fetchAuthStatus]);
+
+  // useEffect(() => {
+  //   let test = setTimeout(() => {
+  //       setTemp(!temp);
+  //       console.log(justFetchedAuthStatus);
+  //   },500);
+  //   return () => {clearTimeout(test);}
+  // },[temp]);
 
   const submitLoginCredentials = async function(event) {
     event.preventDefault();
@@ -62,11 +72,14 @@ const Login = function() {
       });
       console.log(response.data);
       // use res.json loginSuccess property as a conditional to navigate
-      // isAuthenticated only seems to kick in after this function runs
-      // setIsAuthenticated(response.data.loginSuccess);
-      // console.log(`post:${isAuthenticated}`)
+      // state values only seem to kick in after this function runs
       if (response.data.loginSuccess) {
-        // navigating
+        // navigate to dashboard and somehow pass prop like justLoggedIn:true
+        navigate('/dashboard',{
+          state:{
+            justAuthenticated:true
+          }
+        });
       }
     } catch (error) {
       console.log(error);
