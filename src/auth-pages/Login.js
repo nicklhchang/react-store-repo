@@ -1,6 +1,8 @@
 import React, { useState,useContext,useEffect,useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { useAlertContext } from '../alertContext';
+import Alert from '../components/Alert';
 // needed to set cookie in browser, then in dashboard needed to send cookie with axios requests
 axios.defaults.withCredentials = true; // always send cookie to backend because passport wants
 
@@ -22,20 +24,23 @@ const Login = function() {
   */
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const { alert,setCustomAlert } = useAlertContext();
   // const [temp, setTemp] = useState(false);
-
   let navigate = useNavigate();
+
   // just being a bit fancy and using useCallback instead of doing axios get request in useEffect
   const fetchAuthStatus = useCallback(async function() {
     // on first render of this route, check if already have active cookie, if so redirect straight to dashboard
     // btw, useEffect does not like async await
     axios.get('http://localhost:8000/api/v1/auth/login-status')
     .then(function(response) {
-      if (response.data.alreadyAuthenticated) {
-        // navigate to dashboard and somehow pass prop like justAuthenticated:true
+      console.log(response.data);
+      const { alreadyAuthenticated,user } = response.data;
+      if (alreadyAuthenticated) {
+        // navigate to dashboard and somehow pass prop
         navigate('/dashboard',{
           state:{
-            justAuthenticated:true
+            authenticatedUser:user
           }
         });
       }
@@ -43,7 +48,7 @@ const Login = function() {
     .catch(function(error) {
       console.log(error);
     });
-  }, []);
+  }, [navigate]);
 
   useEffect(() => {
     fetchAuthStatus();
@@ -77,12 +82,15 @@ const Login = function() {
         // navigate to dashboard and somehow pass prop like justLoggedIn:true
         navigate('/dashboard',{
           state:{
-            justAuthenticated:true
+            authenticatedUser:response.data.user
           }
         });
+      } else {
+        setCustomAlert(true,'please use a valid username and correct password');
       }
     } catch (error) {
       console.log(error);
+      setCustomAlert(true,'server error');
     }
     setUsername('');
     setPassword('');
@@ -92,6 +100,7 @@ const Login = function() {
     <section className='section-center'>
       <form className='login-form' onSubmit={submitLoginCredentials}>
         <h3>login form</h3>
+        { alert.shown && <Alert /> }
         <div className='form-control'>
           <input
             type='text'

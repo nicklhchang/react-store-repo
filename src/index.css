@@ -124,6 +124,22 @@ main {
   box-shadow: var(--dark-shadow);
 }
 
+.alert {
+  margin-bottom: 1rem;
+  height: 1.25rem;
+  display: grid;
+  align-items: center;
+  text-align: center;
+  font-size: 0.7rem;
+  border-radius: 0.25rem;
+  letter-spacing: var(--spacing);
+  /* text-transform: capitalize; */
+}
+.alert-danger {
+  color: #721c24;
+  background: #f8d7da;
+}
+
 .login-form h3 {
   color: var(--clr-primary-1);
   margin-bottom: 1.5rem;

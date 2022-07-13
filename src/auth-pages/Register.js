@@ -1,14 +1,17 @@
 import React, { useState,useContext,useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import { useAlertContext } from '../alertContext';
+import Alert from '../components/Alert';
 // needed to set cookie in browser, then in dashboard needed to send cookie with axios requests
 axios.defaults.withCredentials = true; // always send cookie to backend because passport wants
 
 const Login = function() {
-  let navigate = useNavigate();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [email, setEmail] = useState('');
+  const { alert,setCustomAlert } = useAlertContext();
+  let navigate = useNavigate();
 
   const submitRegisterCredentials = async function(event) {
     event.preventDefault();
@@ -24,16 +27,26 @@ const Login = function() {
         email:email,
         password:password
       });
-      console.log(response);
-      if (response.data.newlyRegisteredMember) {
-        navigate('/dashboard', {
-          state:{
-            justAuthenticated:true
-          }
-        });
+      // console.log(response);
+      const { requestSuccess } = response.data;
+      if (!requestSuccess) {
+        setCustomAlert(true,'server error');
+      } else {
+        // these properties only exist if requestSuccess
+        const { loginSuccess,user } = response.data;
+        if (loginSuccess) {
+          navigate('/dashboard', {
+            state:{
+              authenticatedUser:user
+            }
+          });
+        } else if (user === 'duplicate') {
+          setCustomAlert(true,'use email and username which have not been taken');
+        }
       }
     } catch (error) {
       console.log(error);
+      setCustomAlert(true,'server error');
     }
     setUsername('');
     setEmail('');
@@ -46,6 +59,7 @@ const Login = function() {
         <h3>register form</h3>
         <h4>*please do not re-use another one of your passwords for this</h4>
         {/* note to users about password > 8 unique username email etc. */}
+        { alert.shown && <Alert /> }
         <div className='form-control'>
           <input
             type='text'
