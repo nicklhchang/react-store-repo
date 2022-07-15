@@ -5,12 +5,12 @@ const Alert = function() {
     const { alert,alertOver } = useAlertContext();
 
     useEffect(() => {
-        let alerted = setTimeout(() => {
+        let countdown = setTimeout(() => {
             alertOver();
         },2500);
         // cleanup whenever something in dependency array changes,
-        // useEffect() sets up new time out
-        return () => {clearTimeout(alerted);}
+        // then useEffect() sets up new time out
+        return () => {clearTimeout(countdown);}
     },[alertOver,alert.shown]);
     
     return (

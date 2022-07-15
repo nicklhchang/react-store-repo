@@ -4,13 +4,15 @@ import './index.css';
 import App from './App';
 // import reportWebVitals from './reportWebVitals';
 import { AlertProvider } from './alertContext';
+import { DashboardProvider } from './dashboardContext';
+import ComposeProviders from './context.js';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
-    <AlertProvider>
-    <App />
-    </AlertProvider>
+    <ComposeProviders providers={[DashboardProvider, AlertProvider]}>
+      <App />
+    </ComposeProviders>
   </React.StrictMode>
 );
 

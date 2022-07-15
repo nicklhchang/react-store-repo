@@ -1,8 +1,9 @@
-import React, { useState,useContext,useEffect,useCallback } from 'react';
+import React, { useState,useEffect,useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useAlertContext } from '../alertContext';
 import Alert from '../components/Alert';
+import { useDashboardContext } from '../dashboardContext';
 // needed to set cookie in browser, then in dashboard needed to send cookie with axios requests
 axios.defaults.withCredentials = true; // always send cookie to backend because passport wants
 
@@ -25,34 +26,44 @@ const Login = function() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const { alert,setCustomAlert } = useAlertContext();
+  const { isAuthenticated,currentUser,fetchAuthStatus } = useDashboardContext();
   // const [temp, setTemp] = useState(false);
   let navigate = useNavigate();
 
   // just being a bit fancy and using useCallback instead of doing axios get request in useEffect
-  const fetchAuthStatus = useCallback(async function() {
-    // on first render of this route, check if already have active cookie, if so redirect straight to dashboard
-    // btw, useEffect does not like async await
-    axios.get('http://localhost:8000/api/v1/auth/login-status')
-    .then(function(response) {
-      console.log(response.data);
-      const { alreadyAuthenticated,user } = response.data;
-      if (alreadyAuthenticated) {
-        // navigate to dashboard and somehow pass prop
-        navigate('/dashboard',{
-          state:{
-            authenticatedUser:user
-          }
-        });
-      }
-    })
-    .catch(function(error) {
-      console.log(error);
-    });
-  }, [navigate]);
+  // const fetchAuthStatus = useCallback(function() {
+  //   // on first render of this route, check if already have active cookie, if so redirect straight to dashboard
+  //   // btw, useEffect does not like async await
+  //   axios.get('http://localhost:8000/api/v1/auth/login-status')
+  //   .then(function(response) {
+  //     console.log(response.data);
+  //     const { alreadyAuthenticated,user } = response.data;
+  //     if (alreadyAuthenticated) {
+  //       // navigate to dashboard and somehow pass prop
+  //       navigate('/dashboard',{
+  //         // need useLocation in /dashboard then location.state.authenticatedUser
+  //         state:{
+  //           authenticatedUser:user
+  //         }
+  //       });
+  //     }
+  //   })
+  //   .catch(function(error) {
+  //     console.log(error);
+  //   });
+  // }, [navigate]);
 
   useEffect(() => {
     fetchAuthStatus();
-  }, [fetchAuthStatus]);
+    if (isAuthenticated) {
+      navigate('/dashboard',{
+        // need useLocation in /dashboard then location.state.authenticatedUser
+        state:{
+          authenticatedUser:currentUser
+        }
+      });
+    }
+  }, [fetchAuthStatus,navigate]);
 
   // useEffect(() => {
   //   let test = setTimeout(() => {

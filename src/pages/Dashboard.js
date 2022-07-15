@@ -1,7 +1,10 @@
-import React, { useState,useEffect } from 'react';
-import { Outlet,useLocation,useNavigate,useParams,Link } from 'react-router-dom'; // use to display different pages within dashboard
+import React, { useState, useEffect, useRef } from 'react';
+import { Outlet, useLocation, useNavigate, useParams, Link, Navigate } from 'react-router-dom';
 import axios from 'axios';
+import Menu from '../dashboard-pages/Menu';
+import { useDashboardContext } from '../dashboardContext';
 axios.defaults.withCredentials = true; // always send cookie to backend because passport wants
+
 
 /**
  * problem is that location.state does not persist changes between page refreshes, the logic without else delete
@@ -15,93 +18,89 @@ axios.defaults.withCredentials = true; // always send cookie to backend because 
  * will not hold up. interesting note is that useState values do not change between useEffect renders,
  * but changes to props will reflect in second render for useEffect()
  * 
- * the design of dashboard route is that only authenticated users can even load the page
+ * the design of dashboard route is that only authenticated users don't get shown session over
  * 
  * just an idea, but maybe on first render get basic menu, but basic menu backend route has to
  * check isAuth middleware first. whether or not pass this middleware send back json with a property of
  * alreadyAuthenticated (true or false)
+ * 
+ * if want to use searching functionality can search=useRef('') as ref={search} in component then, 
+ * setSearch(search.current.value)
  */
 
-const Dashboard = function() {
+const Dashboard = function () {
   // const { memberid } = useParams();
-  const [currentUser, setCurrentUser] = useState(null);
-  const [isAuthenticated,setIsAuthenticated] = useState(false);
-  const [currentMenu, setCurrentMenu] = useState([]); // use .map() to render component
+  const { currentUser } = useDashboardContext();
 
-  // useEffect(() => {
-  //   // on first render of this route, check if already have active cookie, if not session-over
-  //   // btw, useEffect does not like async await
-  //   axios.get('http://localhost:8000/api/v1/auth/login-status')
-  //     .then(function(response) {
-  //       console.log(response.data);
-  //       if (response.data.alreadyAuthenticated) {
-  //         setIsAuthenticated(true);
-  //         setCurrentUser(response.data.user);
-  //       } else {
-  //         setIsAuthenticated(false); 
-  //         // prevent bugs at return JSX, because isAuthenticated persists between renders
-  //         // so if set to true but never set back to false anywhere, never renders session over message
-  //         // EDIT:this was only the case when useContext, no longer an issue
-  //         setCurrentUser(null);
-  //         // set back to null or currentUser becomes like lastUser
-          // EDIT:only a problem with useContext() no longer problem now, re-renders set to null from useState() ^
-  //       }
-  //     })
-  //     .catch(function(error) {
-  //       console.log(error);
-  //     });
-  //   }, []);
-
+  // for expanding and closing navbar
+  const [showLinks, setShowLinks] = useState(false);
+  const linksContainerRef = useRef(null);
+  const linksRef = useRef(null);
   useEffect(() => {
-    // on first render of this route, check if already have active cookie, if not session-over
-    // btw, useEffect does not like async await
-    axios.get('http://localhost:8000/api/v1/browse/menu')
-      .then(function(response) {
-        console.log(response.data);
-        const { alreadyAuthenticated,user,result } = response.data;
-        if (alreadyAuthenticated) {
-          setIsAuthenticated(true);
-          setCurrentUser(user);
-        } else {
-          setIsAuthenticated(false); 
-          // prevent bugs at return JSX, because isAuthenticated persists between renders
-          // so if set to true but never set back to false anywhere, never renders session over message
-          // EDIT:this was only the case when useContext, no longer an issue
-          setCurrentUser(null);
-          // set back to null or currentUser becomes like lastUser
-          // EDIT:only a problem with useContext() no longer problem now, re-renders set to null from useState() ^
-        }
-      })
-      .catch(function(error) {
-        console.log(error);
-      });
-    }, []);
-    
-    if (!isAuthenticated) {
-      // break out early if not/no longer authenticated
-      return (
-        <main>
-            <h3>Session over, please login again</h3>
-            <Link to='/auth/login'>go to login</Link>
-        </main>
-      );
+    // annoying little bug is that you must use linksContainerRef and linksRef
+    // in both of the if and else conditions below, because React won't pick it up
+    // if ref is conditionally rendered
+    const linksHeight = linksRef.current.getBoundingClientRect().height;
+    if (showLinks) {
+      linksContainerRef.current.style.height = `${linksHeight}px`;
     } else {
-      return (
-          <main>
-              <h3>Dashboard for now</h3>
-              {/* ? means if property exists (won't exist if currentUser null), but then again if currentUser
-              was null, isAuthenticated is always false so would never run this else condition anyways */}
-              <h4>{`current user: ${currentUser?._id}`}</h4>
-              <div>
-                <section>basic menu</section>
-                <section>search by category</section>
-                <section>search by price</section>
-                <section>bestsellers</section>
-              </div>
-              <Outlet />
-          </main>
-      );
+      linksContainerRef.current.style.height = '0px';
     }
+  }, [showLinks]);
+
+  // if (!isAuthenticated) {
+  //   // break out early if not/no longer authenticated
+  //   // very cheap workaround with the navbar expand right now
+  //   return (
+  //     <main>
+  //       <div ref={linksContainerRef}></div>
+  //       <div ref={linksRef}></div>
+  //       <h3>Session over, please login again</h3>
+  //       <Link to='/auth/login'>go to login</Link>
+  //     </main>
+  //   );
+  // } else {
+    return (
+      <section>
+        <nav>
+          <section className='nav-center'>
+            <div className='nav-header'>
+              {/* <h3>Dashboard for now</h3> */}
+              {/* ${currentUser?._id} */}
+              <h4>{`Dashboard for: ${currentUser ? currentUser._id : 'unauthenticated'}`}</h4>
+              <button className='nav-toggle' onClick={() => {
+                setShowLinks(
+                  (showLinks) => { return !showLinks; }
+                )
+              }}>
+                Expand
+              </button>
+            </div>
+            <div className='links-dashboard-container' ref={linksContainerRef}>
+              <section className='links' ref={linksRef}>
+                {/* Welcome checks whether auth or not upon visiting /dashboard; index element (App.js) */}
+                <Link to='/dashboard'>welcome</Link>
+                <Link to='/dashboard/menu'>menu</Link>
+                {/* <Menu menuItems={currentMenu}/> */}
+                {/* <section>
+                  <h2 className='section-title'>all menu items</h2>
+                  <div className='menu-item-center'>
+                    {currentMenu.map((item) => {
+                      return (
+                        <Item key={item._id} {...item}/>
+                      );
+                    })}
+                  </div>
+                </section> */}
+                <Link to='/dashboard/cart'>cart</Link>
+              </section>
+            </div>
+          </section>
+        </nav>
+        <Outlet />
+      </section>
+    );
+  // }
 }
 
 export default Dashboard;

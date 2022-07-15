@@ -36,6 +36,7 @@ const Login = function() {
         const { loginSuccess,user } = response.data;
         if (loginSuccess) {
           navigate('/dashboard', {
+            // need useLocation in /dashboard so location.state.authenticatedUser
             state:{
               authenticatedUser:user
             }
@@ -58,7 +59,6 @@ const Login = function() {
       <form className='login-form' onSubmit={submitRegisterCredentials}>
         <h3>register form</h3>
         <h4>*please do not re-use another one of your passwords for this</h4>
-        {/* note to users about password > 8 unique username email etc. */}
         { alert.shown && <Alert /> }
         <div className='form-control'>
           <input

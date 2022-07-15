@@ -1,9 +1,12 @@
 import React, { useState,useEffect } from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom'
 
-import AuthNavbar from './auth-pages/AuthNavbar';
 import Register from './auth-pages/Register';
 import Login from './auth-pages/Login';
+
+import Welcome from './dashboard-pages/Welcome';
+import Menu from './dashboard-pages/Menu';
+import Cart from './dashboard-pages/Cart';
 
 /** 
  * lazy loading implements code splitting so that the large bundle file
@@ -20,21 +23,26 @@ import Login from './auth-pages/Login';
 */
 const Home = React.lazy(() => import('./pages/Home'));
 const Dashboard = React.lazy(() => import('./pages/Dashboard'));
+const AuthNavbar = React.lazy(() => import('./auth-pages/AuthNavbar'));
+const Error = React.lazy(() => import('./pages/Error'));
 
 function App() {
-
   return (
     <Router>
       <React.Suspense fallback={<div>Loading ...</div>}>
         <Routes>
           <Route exact path='/' element={<Home />}/>
+            <Route path='auth/' element={<AuthNavbar />}>
+              <Route path='register' element={<Register />}/>
+              <Route path='login' element={<Login />}/>
+            </Route> {/* this syntax <Route></Route> only works if use <Outlet /> in AuthNavbar */}
             {/* <Route path='dashboard/:memberid' element={<Dashboard />}/> */}
-            <Route path='dashboard' element={<Dashboard />}/>
-          {/* this syntax of routes after / works without <Outlet /> (does not show Home at dashboard etc.) */}
-          <Route path='/auth/' element={<AuthNavbar />}>
-            <Route path='register' element={<Register />}/>
-            <Route path='login' element={<Login />}/>
-          </Route> {/* this syntax <Route></Route> only works if use <Outlet /> in AuthNavbar */}
+            <Route path='dashboard/' element={<Dashboard />}>
+              <Route index element={<Welcome />}/>
+              <Route path='menu' element={<Menu />}/>
+              <Route path='cart' element={<Cart />}/>
+            </Route>
+          <Route path='*' element={<Error />}/>
         </Routes>
       </React.Suspense>
     </Router>
