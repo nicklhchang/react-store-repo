@@ -1,7 +1,7 @@
 import React, { useState,useContext,useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import { useAlertContext } from '../alertContext';
+import { useAlertContext } from '../app-context/alertContext';
 import Alert from '../components/Alert';
 // needed to set cookie in browser, then in dashboard needed to send cookie with axios requests
 axios.defaults.withCredentials = true; // always send cookie to backend because passport wants

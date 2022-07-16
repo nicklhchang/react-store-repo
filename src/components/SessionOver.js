@@ -1,6 +1,6 @@
 import React, { } from 'react'
 import { Link } from 'react-router-dom'
-import { useDashboardContext } from '../dashboardContext';
+import { useDashboardContext } from '../app-context/dashboardContext';
 
 const SessionOver = function() {
     const { isAuthenticated } = useDashboardContext();

@@ -1,4 +1,4 @@
-import React, { useState,useEffect } from 'react';
+import React, {  } from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom'
 
 import Register from './auth-pages/Register';
@@ -31,7 +31,7 @@ function App() {
     <Router>
       <React.Suspense fallback={<div>Loading ...</div>}>
         <Routes>
-          <Route exact path='/' element={<Home />}/>
+          <Route path='/' element={<Home />}/>
             <Route path='auth/' element={<AuthNavbar />}>
               <Route path='register' element={<Register />}/>
               <Route path='login' element={<Login />}/>

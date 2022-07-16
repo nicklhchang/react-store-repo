@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, useLocation, useNavigate, useParams, Link, Navigate } from 'react-router-dom';
-import axios from 'axios';
 import Menu from '../dashboard-pages/Menu';
-import { useDashboardContext } from '../dashboardContext';
+import { useDashboardContext } from '../app-context/dashboardContext';
+import { FaBars } from 'react-icons/fa'
+import axios from 'axios';
 axios.defaults.withCredentials = true; // always send cookie to backend because passport wants
 
 
@@ -34,12 +35,11 @@ const Dashboard = function () {
 
   // for expanding and closing navbar
   const [showLinks, setShowLinks] = useState(false);
+  // note that ref={} in JSX CANNOT be conditionally rendered
   const linksContainerRef = useRef(null);
   const linksRef = useRef(null);
   useEffect(() => {
-    // annoying little bug is that you must use linksContainerRef and linksRef
-    // in both of the if and else conditions below, because React won't pick it up
-    // if ref is conditionally rendered
+    console.log('renders dashboard')
     const linksHeight = linksRef.current.getBoundingClientRect().height;
     if (showLinks) {
       linksContainerRef.current.style.height = `${linksHeight}px`;
@@ -47,60 +47,45 @@ const Dashboard = function () {
       linksContainerRef.current.style.height = '0px';
     }
   }, [showLinks]);
-
-  // if (!isAuthenticated) {
-  //   // break out early if not/no longer authenticated
-  //   // very cheap workaround with the navbar expand right now
-  //   return (
-  //     <main>
-  //       <div ref={linksContainerRef}></div>
-  //       <div ref={linksRef}></div>
-  //       <h3>Session over, please login again</h3>
-  //       <Link to='/auth/login'>go to login</Link>
-  //     </main>
-  //   );
-  // } else {
-    return (
-      <section>
-        <nav>
-          <section className='nav-center'>
-            <div className='nav-header'>
-              {/* <h3>Dashboard for now</h3> */}
-              {/* ${currentUser?._id} */}
-              <h4>{`Dashboard for: ${currentUser ? currentUser._id : 'unauthenticated'}`}</h4>
-              <button className='nav-toggle' onClick={() => {
-                setShowLinks(
-                  (showLinks) => { return !showLinks; }
-                )
-              }}>
-                Expand
-              </button>
-            </div>
-            <div className='links-dashboard-container' ref={linksContainerRef}>
-              <section className='links' ref={linksRef}>
-                {/* Welcome checks whether auth or not upon visiting /dashboard; index element (App.js) */}
-                <Link to='/dashboard'>welcome</Link>
-                <Link to='/dashboard/menu'>menu</Link>
-                {/* <Menu menuItems={currentMenu}/> */}
-                {/* <section>
-                  <h2 className='section-title'>all menu items</h2>
-                  <div className='menu-item-center'>
-                    {currentMenu.map((item) => {
-                      return (
-                        <Item key={item._id} {...item}/>
-                      );
-                    })}
-                  </div>
-                </section> */}
-                <Link to='/dashboard/cart'>cart</Link>
-              </section>
-            </div>
-          </section>
-        </nav>
-        <Outlet />
-      </section>
-    );
-  // }
+  
+  return (
+    <section>
+      <nav>
+        <section className='nav-center'>
+          <div className='nav-header'>
+            <h4>{`Dashboard for: ${currentUser ? currentUser._id : 'unauthenticated'}`}</h4>
+            <button className='nav-toggle' onClick={() => {
+              setShowLinks(
+                (showLinks) => { return !showLinks; }
+              )
+            }}>
+              <FaBars />
+            </button>
+          </div>
+          <div className='links-dashboard-container' ref={linksContainerRef}>
+            <section className='links' ref={linksRef}>
+              {/* Welcome checks whether auth or not upon visiting /dashboard; index element (App.js) */}
+              <Link to='/dashboard'>welcome</Link>
+              <Link to='/dashboard/menu'>menu</Link>
+              {/* <Menu menuItems={currentMenu}/> */}
+              {/* <section>
+                <h2 className='section-title'>all menu items</h2>
+                <div className='menu-item-center'>
+                  {currentMenu.map((item) => {
+                    return (
+                      <Item key={item._id} {...item}/>
+                    );
+                  })}
+                </div>
+              </section> */}
+              <Link to='/dashboard/cart'>cart</Link>
+            </section>
+          </div>
+        </section>
+      </nav>
+      <Outlet />
+    </section>
+  );
 }
 
 export default Dashboard;

@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react'
-import { useAlertContext } from '../alertContext';
+import { useAlertContext } from '../app-context/alertContext';
 
 const Alert = function() {
     const { alert,alertOver } = useAlertContext();
