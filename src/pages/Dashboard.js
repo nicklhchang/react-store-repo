@@ -3,7 +3,7 @@ import { Outlet, useLocation, useNavigate, useParams, Link, Navigate } from 'rea
 import Menu from '../dashboard-pages/Menu';
 import { useDashboardContext } from '../app-context/dashboardContext';
 import { FaBars } from 'react-icons/fa'
-import axios from 'axios';
+import axios, { CanceledError } from 'axios';
 axios.defaults.withCredentials = true; // always send cookie to backend because passport wants
 
 
@@ -24,11 +24,39 @@ axios.defaults.withCredentials = true; // always send cookie to backend because 
 
 const Dashboard = function () {
   // const { memberid } = useParams();
-  const { 
+  const {
     currentUser,
-    changesSinceLastUpload
+    localCart,
+    changesSinceLastUpload,
+    authenticate,
+    unauthenticate,
+    clearChangesOnSync,
+    populateCartInitial,
   } = useDashboardContext();
-  const [trigger,setTrigger] = useState(false);
+  const [trigger, setTrigger] = useState(false);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    axios.get('http://localhost:8000/api/v1/browse/cart', { signal: controller.signal })
+      .then(function (response) {
+        console.log(response.data)
+        const { alreadyAuthenticated, user, result } = response.data;
+        if (alreadyAuthenticated) {
+          authenticate(user, document.cookie)
+          populateCartInitial(result.items)
+        } else {
+          unauthenticate();
+        }
+      })
+      .catch(function (error) {
+        if (error instanceof CanceledError) {
+          console.log('Aborted: no longer waiting on api req to return result')
+        } else {
+          console.log('api error, maybe alert user in future')
+        }
+      });
+    return () => { controller.abort(); }
+  }, [])
 
   // for expanding and closing navbar
   const [showLinks, setShowLinks] = useState(false);
@@ -47,18 +75,29 @@ const Dashboard = function () {
 
   useEffect(() => {
     let regularUpload = setTimeout(() => {
-        setTrigger(!trigger);
-        console.log('test',changesSinceLastUpload);
-        // look at onMouseLeave to trigger save cart message
-        if (changesSinceLastUpload) {
-          axios.post('http://localhost:8000/api/v1/browse/cart/sync',{
-            changes:changesSinceLastUpload
-          }).then(function(response) {}).catch(function(error) {});
-        }
-    },15000);
-    return () => {clearTimeout(regularUpload);}
-  },[trigger]);
-  
+      setTrigger(!trigger);
+      console.log('test', changesSinceLastUpload);
+      // look at onMouseLeave to trigger save cart message
+      if (Object.keys(changesSinceLastUpload).length) {
+        axios.post('http://localhost:8000/api/v1/browse/cart/sync', {
+          cart: localCart
+        }).then(function (response) {
+          // console.log(response.data)
+          const { requestSuccess } = response.data;
+          if (requestSuccess) { clearChangesOnSync(); }
+        }).catch(function (error) {
+          console.log(error)
+        });
+      }
+    }, 15000);
+    // in reality lot slower because if changes occur in first cycle
+    // states only picked up in second cycle so wait time is second cycle
+    // plus remaining time in first cycle that change was made
+    return () => { clearTimeout(regularUpload); }
+  },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [trigger]);
+
   return (
     <section>
       <nav>

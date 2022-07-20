@@ -55,7 +55,7 @@ const cartReducer = function (state, action) {
     switch (action.type) {
         case 'initial-populate':
             const cart = {}
-            action.payload.arr.map((obj,index) => {
+            action.payload.items.map((obj,index) => {
                 cart[obj.item] = obj.count;
             });
             console.log(cart) // cart = {objectid:number,objectid:number...}
@@ -72,9 +72,11 @@ const cartReducer = function (state, action) {
             const { type,id } = action.payload;
             // below guarantees local cart and state changes kept in sync; do both at same time
             const { localCart,changesSinceLastUpload } = state
-            const nextLocalCart = localCart
-            const nextCSLU = changesSinceLastUpload
-            console.log('mutates')
+            // https://stackoverflow.com/questions/122102/what-is-the-most-efficient-way-to-deep-clone-an-object-in-javascript
+            // need deep copy or mutate original state, which causes incrementing twice instead of once
+            const nextLocalCart = JSON.parse(JSON.stringify(localCart));
+            const nextCSLU = JSON.parse(JSON.stringify(changesSinceLastUpload));
+            // console.log('mutates')
             switch (type) {
                 case 'add':
                     // [] notation because had item._id initially

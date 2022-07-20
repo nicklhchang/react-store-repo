@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react'
 import MenuItem from '../components/MenuItem';
 import { useDashboardContext } from '../app-context/dashboardContext';
 import SessionOver from '../components/SessionOver';
+import Loading from '../components/Loading';
 import { FaBars } from 'react-icons/fa';
 
 import axios, { CanceledError } from 'axios'
@@ -16,6 +17,8 @@ const Menu = function () {
     const [pageLessOne, setPageLessOne] = useState(0);
     const [menuPage, setMenuPage] = useState([]);
     const {
+        loading,
+        setLoading,
         wholeMenu,
         setWholeMenu,
         // isLoading,
@@ -64,12 +67,14 @@ const Menu = function () {
     }, [authenticate, logOutUser, pageLessOne, setWholeMenu, setMenuPage])
 
     useEffect(() => {
+        setLoading(true);
         // console.log('initial render fetch whole menu')
         const controller = new AbortController();
         axios.get(axiosReqLink, { signal: controller.signal })
             .then(function (response) {
                 console.log('being handled whole menu')
                 handleAxiosGetThen(response);
+                setLoading(false);
             })
             .catch(function (error) {
                 // must be cancelled before receivig a response from backend
@@ -92,6 +97,7 @@ const Menu = function () {
              * cleanup aborts the api request so no results come back and hang there to piss off React.
              * needed if user switch too quickly between menu and e.g. welcome; faster than time taken to reach api
             */
+            setLoading(false);
             controller.abort();
         }
     },
@@ -119,11 +125,13 @@ const Menu = function () {
                     getReqStr += ('&types=' + mealsStr);
                 }
             }
+            setLoading(true);
             axios.get(getReqStr, { signal: controller.signal })
                 .then(function (response) {
                     console.log('being handled custom menu')
                     handleAxiosGetThen(response);
                     clearFilterOptions();
+                    setLoading(false);
                 })
                 .catch(function (error) {
                     // console.log(error) // because Axios becomes CanceledError not AbortError (fetch)
@@ -141,6 +149,7 @@ const Menu = function () {
         // no problems aborting (cleanup requires non empty sidebarFilterOptions)
         return () => {
             if (Object.keys(sidebarFilterOptions).length) {
+                setLoading(false);
                 controller.abort();
             }
         } // sidebarFilterOptions is the most important in dep array, must run every time it changes
@@ -191,7 +200,8 @@ const Menu = function () {
     return (
         <section>
             <SessionOver />
-            {isAuthenticated && <section>
+            <Loading />
+            {isAuthenticated && !loading && <section>
                 {isSidebarOpen && <MenuSidebar />}
                 <section>
                     {!isSidebarOpen &&

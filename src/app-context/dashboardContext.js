@@ -7,7 +7,6 @@ axios.defaults.withCredentials = true; // always send cookie to backend because 
 const DashboardContext = React.createContext();
 
 const stateAuthUser = {
-  isLoading: true, // needed for refreshing, because refreshing sets to below, so default unauth 
   isAuthenticated: false,
   currentUser: null,
   currentSessionCookie: null
@@ -38,6 +37,7 @@ const stateCart = {
 
 const DashboardProvider = function ({ children }) {
   const [wholeMenu, setWholeMenu] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [authState, authDispatch] = useReducer(authReducer, stateAuthUser);
   const [sidebarState, sidebarDispatch] = useReducer(sidebarReducer, stateSidebar);
   const [cartState, cartDispatch] = useReducer(cartReducer, stateCart);
@@ -65,8 +65,8 @@ const DashboardProvider = function ({ children }) {
     sidebarDispatch({ type: 'clear' });
   }, [])
 
-  const populateCartInitial = useCallback(function (arr) {
-    cartDispatch({ type: 'initial-populate', payload: { arr } });
+  const populateCartInitial = useCallback(function (items) {
+    cartDispatch({ type: 'initial-populate', payload: { items } });
   }, [])
 
   const clearChangesOnSync = useCallback(function () {
@@ -82,6 +82,8 @@ const DashboardProvider = function ({ children }) {
   }, [])
 
   return <DashboardContext.Provider value={{
+    loading,
+    setLoading,
     wholeMenu,
     setWholeMenu,
     ...authState,
