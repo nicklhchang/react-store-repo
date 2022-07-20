@@ -39,7 +39,7 @@ function App() {
             {/* <Route path='dashboard/:memberid' element={<Dashboard />}/> */}
             <Route path='dashboard/' element={<Dashboard />}>
               <Route index element={<Welcome />}/>
-              <Route path='menu' element={<Menu />}/>
+              <Route path='menu' key='menu' element={<Menu key='menu' />}/>
               <Route path='cart' element={<Cart />}/>
             </Route>
           <Route path='*' element={<Error />}/>

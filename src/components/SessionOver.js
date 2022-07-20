@@ -3,8 +3,8 @@ import { Link } from 'react-router-dom'
 import { useDashboardContext } from '../app-context/dashboardContext';
 
 const SessionOver = function() {
-    const { isAuthenticated } = useDashboardContext();
-    if (!isAuthenticated) {
+    const { isAuthenticated,isLoading } = useDashboardContext();
+    if (!isAuthenticated && !isLoading) {
         // break out early if not/no longer authenticated 
         // very cheap workaround with the navbar expand right now
         return (

@@ -1,8 +1,8 @@
 import React, { useState,useEffect,useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import { useAlertContext } from '../app-context/alertContext';
 import Alert from '../components/Alert';
+import axios, { CanceledError } from 'axios';
 // needed to set cookie in browser, then in dashboard needed to send cookie with axios requests
 axios.defaults.withCredentials = true; // always send cookie to backend because passport wants
 
@@ -25,7 +25,6 @@ const Login = function() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const { alert,setCustomAlert } = useAlertContext();
-  // const { isAuthenticated,currentUser,fetchAuthStatus } = useDashboardContext();
   // const [temp, setTemp] = useState(false);
   let navigate = useNavigate();
 
@@ -33,7 +32,8 @@ const Login = function() {
   const fetchAuthStatusLogin = useCallback(function() {
     // on first render of this route, check if already have active cookie, if so redirect straight to dashboard
     // btw, useEffect does not like async await
-    axios.get('http://localhost:8000/api/v1/auth/login-status')
+    const controller = new AbortController();
+    axios.get('http://localhost:8000/api/v1/auth/login-status', { signal: controller.signal })
     .then(function(response) {
       // console.log(response.data);
       const { alreadyAuthenticated,user } = response.data;
@@ -47,14 +47,19 @@ const Login = function() {
         });
       }
     })
-    .catch(function(error) {
-      console.log(error);
+    .catch(function (error) {
+      if (error instanceof CanceledError) {
+          console.log('Aborted: no longer waiting on api req to return result')
+      } else {
+          console.log('api error, maybe alert user in future')
+      }
     });
+    return () => {controller.abort();}
   }, [navigate]);
 
   useEffect(() => {
     fetchAuthStatusLogin();
-  }, [fetchAuthStatusLogin,navigate]);
+  }, [fetchAuthStatusLogin]);
 
   // useEffect(() => {
   //   let test = setTimeout(() => {
@@ -77,14 +82,14 @@ const Login = function() {
         username:username,
         password:password
       });
-      console.log(response.data);
+      const { loginSuccess,user } = response.data;
       // use res.json loginSuccess property as a conditional to navigate
       // state values only seem to kick in after this function runs
-      if (response.data.loginSuccess) {
+      if (loginSuccess) {
         // navigate to dashboard and somehow pass prop like justLoggedIn:true
         navigate('/dashboard',{
           state:{
-            authenticatedUser:response.data.user
+            authenticatedUser:user
           }
         });
       } else {
@@ -115,7 +120,7 @@ const Login = function() {
         <br/>
         <div className='form-control'>
           <input
-            type='text'
+            type='password'
             className='login'
             placeholder='password'
             value={password}

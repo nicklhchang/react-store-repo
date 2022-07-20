@@ -19,19 +19,16 @@ axios.defaults.withCredentials = true; // always send cookie to backend because 
  * will not hold up. interesting note is that useState values do not change between useEffect renders,
  * but changes to props will reflect in second render for useEffect()
  * 
- * the design of dashboard route is that only authenticated users don't get shown session over
- * 
- * just an idea, but maybe on first render get basic menu, but basic menu backend route has to
- * check isAuth middleware first. whether or not pass this middleware send back json with a property of
- * alreadyAuthenticated (true or false)
- * 
- * if want to use searching functionality can search=useRef('') as ref={search} in component then, 
- * setSearch(search.current.value)
+ * dashboard route has index element of welcome so by default Welcome component checks if still auth or not
  */
 
 const Dashboard = function () {
   // const { memberid } = useParams();
-  const { currentUser } = useDashboardContext();
+  const { 
+    currentUser,
+    changesSinceLastUpload
+  } = useDashboardContext();
+  const [trigger,setTrigger] = useState(false);
 
   // for expanding and closing navbar
   const [showLinks, setShowLinks] = useState(false);
@@ -47,6 +44,20 @@ const Dashboard = function () {
       linksContainerRef.current.style.height = '0px';
     }
   }, [showLinks]);
+
+  useEffect(() => {
+    let regularUpload = setTimeout(() => {
+        setTrigger(!trigger);
+        console.log('test',changesSinceLastUpload);
+        // look at onMouseLeave to trigger save cart message
+        if (changesSinceLastUpload) {
+          axios.post('http://localhost:8000/api/v1/browse/cart/sync',{
+            changes:changesSinceLastUpload
+          }).then(function(response) {}).catch(function(error) {});
+        }
+    },15000);
+    return () => {clearTimeout(regularUpload);}
+  },[trigger]);
   
   return (
     <section>

@@ -1,5 +1,5 @@
-import React, { useState,useContext,useCallback, useReducer } from 'react'
-import { authReducer,sidebarReducer } from './dashboardReducer';
+import React, { useState, useContext, useCallback, useReducer } from 'react'
+import { authReducer, sidebarReducer, cartReducer } from './dashboardReducer';
 
 import axios from 'axios'
 axios.defaults.withCredentials = true; // always send cookie to backend because passport wants
@@ -7,53 +7,101 @@ axios.defaults.withCredentials = true; // always send cookie to backend because 
 const DashboardContext = React.createContext();
 
 const stateAuthUser = {
-  isAuthenticated:false,
-  currentUser:null,
-  currentSessionCookie:null
+  isLoading: true, // needed for refreshing, because refreshing sets to below, so default unauth 
+  isAuthenticated: false,
+  currentUser: null,
+  currentSessionCookie: null
 }
 
 const stateSidebar = {
-  isSidebarOpen:false,
-  sidebarFilterOptions:[]
+  isSidebarOpen: false,
+  sidebarFilterOptions: {
+    // empty by default; important for useEffect()
+    // mealTypes:[],
+    // budgetPrice:0
+  }
 }
 
-const DashboardProvider = function({ children }) {
-    const [wholeMenu,setWholeMenu] = useState([]);
-    const [authState,authDispatch] = useReducer(authReducer,stateAuthUser);
-    const [sidebarState,sidebarDispatch] = useReducer(sidebarReducer,stateSidebar);
+const stateCart = {
+  // localCart is { property:value } => { item._id:count }
+  localCart: {},
+  // time out running every minute, check if changesSinceLastUpload empty,
+  // if not, then post request localCart/changesSinceLastUpload (handled), clear changesSinceLastUpload
+  // cleanup function if too complicated can not use; do not res.json anything back to frontend
 
-    const authenticate = function(user,sessionCookie) {
-      authDispatch({ type:'authenticate',payload:{user,sessionCookie} });
-    }
-
-    const unauthenticate = function() {
-      authDispatch({ type:'unauthenticate' });
-    }
-
-    const toggleSidebar = function(action) {
-      sidebarDispatch({ type:action });
-    }
-
-    const filterOptions = function(arr) {
-      sidebarDispatch({ type:'filter',payload:arr });
-    }
-
-    return <DashboardContext.Provider value={{
-        wholeMenu,
-        setWholeMenu,
-        ...authState,
-        authenticate,
-        unauthenticate,
-        ...sidebarState,
-        toggleSidebar,
-        filterOptions
-    }}>
-        {children}
-    </DashboardContext.Provider>
+  // changesSinceLastUpload is { property:value } => { item._id:count }
+  changesSinceLastUpload: {}
+  // when post to backend, make copy first, then clear it, so any new changes can immediately be written
+  // then use copy as req.body in backend post
+  // OR lock this property finish post req then unlock so add to cart button can make changes
 }
 
-const useDashboardContext = function() {
-    return useContext(DashboardContext);
+const DashboardProvider = function ({ children }) {
+  const [wholeMenu, setWholeMenu] = useState([]);
+  const [authState, authDispatch] = useReducer(authReducer, stateAuthUser);
+  const [sidebarState, sidebarDispatch] = useReducer(sidebarReducer, stateSidebar);
+  const [cartState, cartDispatch] = useReducer(cartReducer, stateCart);
+
+  // all the useCallback's prevent infinite loop when placing these functions in dep arr
+
+  const authenticate = useCallback(function (user, sessionCookie) {
+    authDispatch({ type: 'authenticate', payload: { user, sessionCookie } });
+  }, [])
+
+  const unauthenticate = useCallback(function () {
+    authDispatch({ type: 'unauthenticate' });
+  }, [])
+
+  const toggleSidebar = useCallback(function (action) {
+    sidebarDispatch({ type: action });
+  }, [])
+
+  const setFilterOptions = useCallback(function (arr, budget) {
+    // console.log(arr) // ES6 shorthand {arr:arr,budget:budget}
+    sidebarDispatch({ type: 'filter', payload: { arr, budget } });
+  }, [])
+
+  const clearFilterOptions = useCallback(function () {
+    sidebarDispatch({ type: 'clear' });
+  }, [])
+
+  const populateCartInitial = useCallback(function (arr) {
+    cartDispatch({ type: 'initial-populate', payload: { arr } });
+  }, [])
+
+  const clearChangesOnSync = useCallback(function () {
+    cartDispatch({ type: 'clear-on-sync' })
+  }, [])
+
+  const mutateLocalCart = useCallback(function (type, id) {
+    cartDispatch({ type: 'mutate-local-cart', payload: { type, id } })
+  }, [])
+
+  const addChange = useCallback(function (change) {
+    cartDispatch({ type: 'add-change', payload: { change } })
+  }, [])
+
+  return <DashboardContext.Provider value={{
+    wholeMenu,
+    setWholeMenu,
+    ...authState,
+    authenticate,
+    unauthenticate,
+    ...sidebarState,
+    toggleSidebar,
+    setFilterOptions,
+    clearFilterOptions,
+    ...cartState,
+    populateCartInitial,
+    clearChangesOnSync,
+    mutateLocalCart
+  }}>
+    {children}
+  </DashboardContext.Provider>
 }
 
-export { useDashboardContext,DashboardProvider }
+const useDashboardContext = function () {
+  return useContext(DashboardContext);
+}
+
+export { useDashboardContext, DashboardProvider }

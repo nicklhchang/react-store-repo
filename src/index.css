@@ -38,8 +38,8 @@
   --max-width: 1170px;
   --fixed-width: 620px;
 
-  --primaryLightColor: #d4e6a5;
-  --primaryColor: #476a2e;
+  --primaryLightColor: var(--clr-primary-8);
+  --primaryColor: var(--clr-primary-6);
   --primaryDarkColor: #c02c03;
   --mainWhite: #fff;
   --offWhite: #f7f7f7;
@@ -516,7 +516,7 @@ nav {
   padding: 1rem 1.5rem;
 }
 .sidebar {
-  position: fixed;
+  position: absolute;
   /* top: 0;
   left: 0; */
   width: 100%;
