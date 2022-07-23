@@ -12,44 +12,47 @@ axios.defaults.withCredentials = true; // always send cookie to backend because 
  */
 const Welcome = function () {
   const {
+    setItemPrices,
+    setLoading,
     isAuthenticated,
     authenticate,
     unauthenticate
   } = useDashboardContext();
 
-  // prevents infinite loop when placing function inside dependency array
-  // because useCallback memoizes, function remains same, and hence no change
-  const fetchAuthStatusWelcome = useCallback(function () {
-    // on first render of this route, check if already have active cookie, if so redirect straight to dashboard
-    // btw, useEffect does not like async await
+  useEffect(() => {
+    setLoading(true);
     const controller = new AbortController();
-    axios.get('http://localhost:8000/api/v1/auth/login-status', { signal: controller.signal })
+    axios.get('http://localhost:8000/api/v1/browse/cart/prices', { signal: controller.signal })
       .then(function (response) {
-        // console.log(response.data);
-        const { alreadyAuthenticated, user } = response.data;
+        console.log(response.data)
+        const { alreadyAuthenticated, user, result } = response.data;
         if (alreadyAuthenticated) {
-          authenticate(user, document.cookie);
+          authenticate(user, document.cookie)
+          let prices = {};
+          result.forEach(id_cost => {
+            prices[id_cost._id] = id_cost.cost;
+          });
+          // console.log(prices)
+          setItemPrices(prices);
+          setLoading(false);
         } else {
-          // set to default because unlike useState, re-renders do not reset dashboardContext states
           unauthenticate();
+          // display session over
+          setLoading(false);
         }
       })
       .catch(function (error) {
         if (error instanceof CanceledError) {
-            console.log('Aborted: no longer waiting on api req to return result')
+          console.log('Aborted: no longer waiting on api req to return result')
         } else {
-            console.log('api error, maybe alert user in future')
+          // second render runs this
+          console.log('api error, maybe alert user in future')
         }
       });
-      return () => {controller.abort();}
-    // before placing in dependency array useCallback to memoize and prevent infinite loop
-  }, // eslint-disable-next-line react-hooks/exhaustive-deps
-    []);
-
-  useEffect(() => {
-    //   console.log('render welcome')
-    fetchAuthStatusWelcome();
-  }, [fetchAuthStatusWelcome]);
+    return () => { controller.abort(); }
+  },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [])
 
   return (
     <section>

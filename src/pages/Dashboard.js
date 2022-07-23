@@ -28,35 +28,16 @@ const Dashboard = function () {
     currentUser,
     localCart,
     changesSinceLastUpload,
-    authenticate,
-    unauthenticate,
-    clearChangesOnSync,
-    populateCartInitial,
+    clearChangesOnSync
   } = useDashboardContext();
   const [trigger, setTrigger] = useState(false);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    axios.get('http://localhost:8000/api/v1/browse/cart', { signal: controller.signal })
-      .then(function (response) {
-        console.log(response.data)
-        const { alreadyAuthenticated, user, result } = response.data;
-        if (alreadyAuthenticated) {
-          authenticate(user, document.cookie)
-          populateCartInitial(result.items)
-        } else {
-          unauthenticate();
-        }
-      })
-      .catch(function (error) {
-        if (error instanceof CanceledError) {
-          console.log('Aborted: no longer waiting on api req to return result')
-        } else {
-          console.log('api error, maybe alert user in future')
-        }
-      });
-    return () => { controller.abort(); }
-  }, [])
+  // useRef powerful when dealing with stale data 
+  // (make it point to the variable, hence track variable's value in real time), 
+  // or when re-renders/refreshes every time value changes is undesirable
+  const cslu = useRef(changesSinceLastUpload);
+  cslu.current = changesSinceLastUpload;
+  const cart = useRef(localCart);
+  cart.current = localCart;
 
   // for expanding and closing navbar
   const [showLinks, setShowLinks] = useState(false);
@@ -74,15 +55,21 @@ const Dashboard = function () {
   }, [showLinks]);
 
   useEffect(() => {
+    // in other components like Welcome and Menu and Cart do not clear changesSinceLastUpload
+    // whenever the user is unauthenticated, it is like log out user but sync their last few changes
     let regularUpload = setTimeout(() => {
       setTrigger(!trigger);
-      console.log('test', changesSinceLastUpload);
+      console.log('regular upload', cslu.current);
       // look at onMouseLeave to trigger save cart message
-      if (Object.keys(changesSinceLastUpload).length) {
+      const sumChanges = Object.values(cslu.current)
+      .reduce((prev,current) => {
+        return prev + current; // if expected assignment not expression but use return
+      },0); // initial prev is 0, then prev + current gets passed to next iteration's prev
+      if (Object.keys(cslu.current).length && sumChanges) {
         axios.post('http://localhost:8000/api/v1/browse/cart/sync', {
-          cart: localCart
+          cart: cart.current
         }).then(function (response) {
-          // console.log(response.data)
+          console.log(response.data)
           const { requestSuccess } = response.data;
           if (requestSuccess) { clearChangesOnSync(); }
         }).catch(function (error) {
@@ -90,9 +77,6 @@ const Dashboard = function () {
         });
       }
     }, 15000);
-    // in reality lot slower because if changes occur in first cycle
-    // states only picked up in second cycle so wait time is second cycle
-    // plus remaining time in first cycle that change was made
     return () => { clearTimeout(regularUpload); }
   },
     // eslint-disable-next-line react-hooks/exhaustive-deps

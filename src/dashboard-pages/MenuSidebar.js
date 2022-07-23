@@ -55,6 +55,9 @@ const MenuSidebar = function () {
         }
     }
 
+    // onSubmitFilter and onClearFilter with toggleSidebar('close') prevents
+    // re-rendering Menu's useEffect (es-lint disable so does not run useEffect 
+    // on every state change); re running useEffect; brief moment of unauthenticated
     const onSubmitFilter = function (event) {
         event.preventDefault();
         // auth status checked by axios get to backend
@@ -67,6 +70,12 @@ const MenuSidebar = function () {
         toggleSidebar('close');
     }
 
+    const onClearFilter = function (event) {
+        event.preventDefault();
+        clearFilterOptions();
+        toggleSidebar('close');
+    }
+
     return (
         <aside className={`sidebar ${isSidebarOpen ? 'show-sidebar' : ''}`}>
             <div className='sidebar-header'>
@@ -75,7 +84,7 @@ const MenuSidebar = function () {
                     <FaTimes />
                 </button>
             </div>
-            <form onSubmit={onSubmitFilter}>
+            <form>
                 {menuOptionsEnum.map((option, index) => {
                     return (
                         // each option is in an unordered list, so 7 unordered lists
@@ -118,7 +127,9 @@ const MenuSidebar = function () {
                     <button
                         type='submit'
                         className='btn btn-submit'
-                        onClick={() => {clearFilterOptions()}}>
+                        // never call clearFilterOptions(); trigger re-render of Menu; cause unauthenticated glitch
+                        // onClick={() => {clearFilterOptions()}}>
+                        onClick={onClearFilter}>
                         Clear filter
                     </button>
                 </div>

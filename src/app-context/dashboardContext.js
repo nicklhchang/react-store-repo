@@ -9,7 +9,8 @@ const DashboardContext = React.createContext();
 const stateAuthUser = {
   isAuthenticated: false,
   currentUser: null,
-  currentSessionCookie: null
+  currentSessionCookie: null 
+  // could always document.cookie === currentSessionCookie instead of having isAuthenticated field
 }
 
 const stateSidebar = {
@@ -36,8 +37,10 @@ const stateCart = {
 }
 
 const DashboardProvider = function ({ children }) {
-  const [wholeMenu, setWholeMenu] = useState([]);
+  // no useRef's because want re renders whenever these states change
   const [loading, setLoading] = useState(false);
+  const [wholeMenu, setWholeMenu] = useState([]);
+  const [itemPrices, setItemPrices] = useState({});
   const [authState, authDispatch] = useReducer(authReducer, stateAuthUser);
   const [sidebarState, sidebarDispatch] = useReducer(sidebarReducer, stateSidebar);
   const [cartState, cartDispatch] = useReducer(cartReducer, stateCart);
@@ -77,6 +80,10 @@ const DashboardProvider = function ({ children }) {
     cartDispatch({ type: 'mutate-local-cart', payload: { type, id } })
   }, [])
 
+  const clearLocalCart = useCallback(function() {
+    cartDispatch({ type: 'clear-local-cart' })
+  }, [])
+
   const addChange = useCallback(function (change) {
     cartDispatch({ type: 'add-change', payload: { change } })
   }, [])
@@ -84,6 +91,8 @@ const DashboardProvider = function ({ children }) {
   return <DashboardContext.Provider value={{
     loading,
     setLoading,
+    itemPrices,
+    setItemPrices,
     wholeMenu,
     setWholeMenu,
     ...authState,
@@ -96,7 +105,8 @@ const DashboardProvider = function ({ children }) {
     ...cartState,
     populateCartInitial,
     clearChangesOnSync,
-    mutateLocalCart
+    mutateLocalCart,
+    clearLocalCart
   }}>
     {children}
   </DashboardContext.Provider>
