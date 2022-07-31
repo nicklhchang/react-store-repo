@@ -1,7 +1,8 @@
 import React, { useState, useContext, useCallback, useReducer } from 'react'
 import { authReducer, sidebarReducer, cartReducer } from './dashboardReducer';
+import { useAlertContext } from './alertContext';
 
-import axios from 'axios'
+import axios, { CanceledError } from 'axios'
 axios.defaults.withCredentials = true; // always send cookie to backend because passport wants
 
 const DashboardContext = React.createContext();
@@ -9,7 +10,7 @@ const DashboardContext = React.createContext();
 const stateAuthUser = {
   isAuthenticated: false,
   currentUser: null,
-  currentSessionCookie: null 
+  currentSessionCookie: null
   // could always document.cookie === currentSessionCookie instead of having isAuthenticated field
 }
 
@@ -25,28 +26,27 @@ const stateSidebar = {
 const stateCart = {
   // localCart is { property:value } => { item._id:count }
   localCart: {},
-  // time out running every minute, check if changesSinceLastUpload empty,
-  // if not, then post request localCart/changesSinceLastUpload (handled), clear changesSinceLastUpload
-  // cleanup function if too complicated can not use; do not res.json anything back to frontend
-
   // changesSinceLastUpload is { property:value } => { item._id:count }
-  changesSinceLastUpload: {}
-  // when post to backend, make copy first, then clear it, so any new changes can immediately be written
-  // then use copy as req.body in backend post
-  // OR lock this property finish post req then unlock so add to cart button can make changes
+  changesSinceLastUpload: {},
+  isCartLocked: false
 }
 
 const DashboardProvider = function ({ children }) {
   // no useRef's because want re renders whenever these states change
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [wholeMenu, setWholeMenu] = useState([]);
   const [itemPrices, setItemPrices] = useState({});
+
+  // wrapped dashboard provider inside alert provider
+  const { setCustomAlert } = useAlertContext();
+
   const [authState, authDispatch] = useReducer(authReducer, stateAuthUser);
   const [sidebarState, sidebarDispatch] = useReducer(sidebarReducer, stateSidebar);
   const [cartState, cartDispatch] = useReducer(cartReducer, stateCart);
 
   // all the useCallback's prevent infinite loop when placing these functions in dep arr
 
+  // authentication related
   const authenticate = useCallback(function (user, sessionCookie) {
     authDispatch({ type: 'authenticate', payload: { user, sessionCookie } });
   }, [])
@@ -55,6 +55,7 @@ const DashboardProvider = function ({ children }) {
     authDispatch({ type: 'unauthenticate' });
   }, [])
 
+  // sidebar state
   const toggleSidebar = useCallback(function (action) {
     sidebarDispatch({ type: action });
   }, [])
@@ -68,25 +69,95 @@ const DashboardProvider = function ({ children }) {
     sidebarDispatch({ type: 'clear' });
   }, [])
 
+  // cart state
   const populateCartInitial = useCallback(function (items) {
     cartDispatch({ type: 'initial-populate', payload: { items } });
+  }, [])
+
+  const lockCart = useCallback(function () {
+    cartDispatch({ type: 'lock-changes' })
+  }, [])
+
+  const unlockCart = useCallback(function () {
+    cartDispatch({ type: 'unlock-changes' })
   }, [])
 
   const clearChangesOnSync = useCallback(function () {
     cartDispatch({ type: 'clear-on-sync' })
   }, [])
 
-  const mutateLocalCart = useCallback(function (type, id) {
-    cartDispatch({ type: 'mutate-local-cart', payload: { type, id } })
+  const mutateLocalCart = useCallback(function (optionM, id) {
+    cartDispatch({ type: 'mutate-local-cart', payload: { optionM, id } })
   }, [])
 
-  const clearLocalCart = useCallback(function() {
-    cartDispatch({ type: 'clear-local-cart' })
+  const clearLocalCart = useCallback(function (optionC) {
+    cartDispatch({ type: 'clear-local-cart', payload: { optionC } })
   }, [])
 
-  const addChange = useCallback(function (change) {
-    cartDispatch({ type: 'add-change', payload: { change } })
-  }, [])
+  const loadCart = useCallback(function (cart, controller) {
+    axios.get('http://localhost:8000/api/v1/browse/cart', { signal: controller.signal })
+      .then(function (response) {
+        console.log(response.data)
+        const { alreadyAuthenticated, user, result } = response.data;
+        if (alreadyAuthenticated) {
+          authenticate(user, document.cookie)
+          // if empty localCart or new user need to populate; get req on Welcome and Cart fixes
+          if (!Object.keys(cart).length) {
+            populateCartInitial(result.cart?.items)
+          }
+          let prices = {};
+          result.prices.forEach(id_cost => {
+            prices[id_cost._id] = id_cost.cost;
+          });
+          // console.log(prices)
+          setItemPrices(prices);
+        } else {
+          unauthenticate();
+          // display session over
+        }
+        setLoading(false);
+      })
+      .catch(function (error) {
+        if (error instanceof CanceledError) {
+          console.log('Aborted: no longer waiting on api req to return result')
+        } else {
+          console.log('api error, maybe alert user in future')
+          setCustomAlert(true, 'error loading your cart, please retry')
+        }
+      });
+  },
+    // setCustomAlert not wrapped in a useCallback
+    [authenticate, populateCartInitial, setCustomAlert, unauthenticate])
+
+  // // add remove (-1) and remove item can probably be wrapped into one
+  // const addToCart = useCallback(function (lockStatus, id) {
+  //   lockStatus
+  //     ? setCustomAlert(true, 'please wait a moment for your changes to sync')
+  //     : mutateLocalCart('add', id);
+  // },
+  //   // setCustomAlert not wrapped in a useCallback
+  //   [mutateLocalCart, setCustomAlert])
+
+  // const removeFromCart = useCallback(function (lockStatus, id) {
+  //   lockStatus
+  //     ? setCustomAlert(true, 'please wait a moment for your changes to sync')
+  //     : mutateLocalCart('remove', id);
+  // },
+  //   // setCustomAlert not wrapped in a useCallback
+  //   [mutateLocalCart, setCustomAlert])
+
+  // const removeItemFromCart = useCallback(function (lockStatus, id) {
+  //   // should implement checking if property exists 
+  //   lockStatus
+  //     ? setCustomAlert(true, 'please wait a moment for your changes to sync')
+  //     : mutateLocalCart('remove-item', id);
+  // }, [mutateLocalCart, setCustomAlert])
+
+  const mutateCartCheckLock = useCallback(function (lockStatus, mutation, id) {
+    lockStatus
+      ? setCustomAlert(true, 'please wait a moment for your changes to sync')
+      : mutateLocalCart(mutation, id);
+  }, [mutateLocalCart, setCustomAlert])
 
   return <DashboardContext.Provider value={{
     loading,
@@ -104,9 +175,16 @@ const DashboardProvider = function ({ children }) {
     clearFilterOptions,
     ...cartState,
     populateCartInitial,
+    lockCart,
+    unlockCart,
     clearChangesOnSync,
     mutateLocalCart,
-    clearLocalCart
+    clearLocalCart,
+    loadCart,
+    // addToCart,
+    // removeFromCart,
+    // removeItemFromCart,
+    mutateCartCheckLock
   }}>
     {children}
   </DashboardContext.Provider>

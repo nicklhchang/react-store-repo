@@ -1,6 +1,7 @@
 import React, {  } from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom'
 
+import AuthIndex from './auth-pages/AuthIndex';
 import Register from './auth-pages/Register';
 import Login from './auth-pages/Login';
 
@@ -33,6 +34,7 @@ function App() {
         <Routes>
           <Route path='/' element={<Home />}/>
             <Route path='auth/' element={<AuthNavbar />}>
+              <Route index element={<AuthIndex />}/>
               <Route path='register' element={<Register />}/>
               <Route path='login' element={<Login />}/>
             </Route> {/* this syntax <Route></Route> only works if use <Outlet /> in AuthNavbar */}

@@ -18,6 +18,7 @@ const MenuSidebar = function () {
         unauthenticate,
         isSidebarOpen,
         toggleSidebar,
+        sidebarFilterOptions,
         setFilterOptions,
         clearFilterOptions
     } = useDashboardContext();
@@ -84,7 +85,8 @@ const MenuSidebar = function () {
                     <FaTimes />
                 </button>
             </div>
-            <form>
+            <form className='sidebar-form'>
+                <h4>Menu types</h4>
                 {menuOptionsEnum.map((option, index) => {
                     return (
                         // each option is in an unordered list, so 7 unordered lists
@@ -108,6 +110,7 @@ const MenuSidebar = function () {
                         </ul>
                     );
                 })}
+                <h4>Maximum price</h4>
                 <input
                     type='range'
                     step={0.5}
@@ -130,10 +133,19 @@ const MenuSidebar = function () {
                         // never call clearFilterOptions(); trigger re-render of Menu; cause unauthenticated glitch
                         // onClick={() => {clearFilterOptions()}}>
                         onClick={onClearFilter}>
-                        Clear filter
+                        View whole menu
                     </button>
                 </div>
             </form>
+            {/* https://stackoverflow.com/questions/53048037/react-showing-0-instead-of-nothing-with-short-circuit-conditional-component/53048160#53048160 */}
+            {/* ternary or boolean cast like below prevents rendering 0 */}
+            {!!Object.keys(sidebarFilterOptions).length && <div className='sidebar-form'>
+                <h4>Current menu types with budget {sidebarFilterOptions.budgetPrice}:</h4>
+                {sidebarFilterOptions.mealTypes.map((type) => {
+                    return (<li key={type}>{type}</li>);
+                })}
+                {/* <h4>{sidebarFilterOptions.budgetPrice}</h4> */}
+            </div>}
         </aside>
     );
 }

@@ -10,7 +10,8 @@ import ComposeProviders from './app-context/context';
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
-    <ComposeProviders providers={[DashboardProvider, AlertProvider]}>
+    {/* right most in array below is most nested; need alerts for dashboardContext */}
+    <ComposeProviders providers={[AlertProvider, DashboardProvider]}>
       <App />
     </ComposeProviders>
   </React.StrictMode>

@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import MenuItem from '../components/MenuItem';
 import { useDashboardContext } from '../app-context/dashboardContext';
+import { useAlertContext } from '../app-context/alertContext';
+import Alert from '../components/Alert';
 import SessionOver from '../components/SessionOver';
 import Loading from '../components/Loading';
 import { FaBars } from 'react-icons/fa';
@@ -30,10 +32,10 @@ const Menu = function () {
         unauthenticate,
         isSidebarOpen,
         sidebarFilterOptions,
-        toggleSidebar,
-        clearFilterOptions,
-        clearLocalCart
+        toggleSidebar
     } = useDashboardContext();
+    const { alert, setCustomAlert } = useAlertContext();
+    // const sidebarOpen = useRef(isSidebarOpen); sidebarOpen.current = isSidebarOpen;
 
     const logOutUser = useCallback(function () {
         unauthenticate();
@@ -44,7 +46,7 @@ const Menu = function () {
         // bad bad will clear on backend because syncing, ok without because loads next user's cart on login
         // clearLocalCart();
         // menuPage.current = [];
-    }, [clearFilterOptions, setWholeMenu, unauthenticate, clearLocalCart]) // setMenuPage from this component
+    }, [setWholeMenu, unauthenticate]) // setMenuPage from this component
 
     const bucket = function (arr) {
         const itemsPerBucket = 5;
@@ -181,7 +183,9 @@ const Menu = function () {
          * clearing filter options on logout. but if filter options isn't cleared on logout,
          * it will need to be cleared when user logs in again.
          */
+        console.log(sidebarFilterOptions)
         setLoading(true);
+        toggleSidebar('close');
         const controller = new AbortController();
         // set to default; must have or breaks if on page 3 and filter returns 2 pages
         setPageLessOne(0);
@@ -221,6 +225,7 @@ const Menu = function () {
                     console.log('Aborted: no longer waiting on api req to return result')
                 } else {
                     console.log('api error, maybe alert user in future')
+                    setCustomAlert(true, 'failed to get menu, please retry')
                 }
             });
         return () => {
@@ -230,15 +235,18 @@ const Menu = function () {
              * and .then() taken. else if api sends result, the not needed result leads to 'memory leak'.)
              * React throws hissy fit when this happens, so need this cleanup return function.
              * cleanup aborts the api request so no results come back and hang there to piss off React.
-             * needed if user switch too quickly between menu and e.g. welcome; faster than time taken to reach api
+             * needed if user switch too quickly between menu and e.g. welcome; faster than time taken to receive response
             */
             setLoading(false);
             controller.abort();
         }
     },
-        // prevents re renders because state from dashboardContext changes
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-        [sidebarFilterOptions])
+        [sidebarFilterOptions,
+            handleAxiosGetThen,
+            setCustomAlert,
+            setLoading,
+            toggleSidebar
+        ])
 
     const calcWholeMenu = function () {
         // reduce does not work because pass previous element to next (which is an array, not number)
@@ -291,9 +299,10 @@ const Menu = function () {
 
     return (
         <section>
+            {alert.shown && <Alert />}
             <SessionOver />
             <Loading />
-            {isAuthenticated && !loading && <section>
+            {!!isAuthenticated && !loading && <section>
                 {isSidebarOpen && <MenuSidebar />}
                 <section>
                     {!isSidebarOpen &&

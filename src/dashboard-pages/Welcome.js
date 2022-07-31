@@ -1,8 +1,10 @@
-import React, { useCallback, useEffect } from 'react'
+import React, { useRef, useEffect } from 'react'
 import { useDashboardContext } from '../app-context/dashboardContext';
+import { useAlertContext } from '../app-context/alertContext';
 import SessionOver from '../components/SessionOver';
 
-import axios, { CanceledError } from 'axios';
+import axios, { } from 'axios';
+import Alert from '../components/Alert';
 axios.defaults.withCredentials = true; // always send cookie to backend because passport wants
 
 /**
@@ -12,55 +14,34 @@ axios.defaults.withCredentials = true; // always send cookie to backend because 
  */
 const Welcome = function () {
   const {
-    setItemPrices,
     setLoading,
     isAuthenticated,
-    authenticate,
-    unauthenticate
+    localCart,
+    loadCart
   } = useDashboardContext();
+  const { alert } = useAlertContext();
+  const cart = useRef(localCart); cart.current = localCart;
 
   useEffect(() => {
+    // fetch user cart and prices or bug when going straight to Menu and adding without visiting Cart
+    console.log('cart loaded')
     setLoading(true);
     const controller = new AbortController();
-    axios.get('http://localhost:8000/api/v1/browse/cart/prices', { signal: controller.signal })
-      .then(function (response) {
-        console.log(response.data)
-        const { alreadyAuthenticated, user, result } = response.data;
-        if (alreadyAuthenticated) {
-          authenticate(user, document.cookie)
-          let prices = {};
-          result.forEach(id_cost => {
-            prices[id_cost._id] = id_cost.cost;
-          });
-          // console.log(prices)
-          setItemPrices(prices);
-          setLoading(false);
-        } else {
-          unauthenticate();
-          // display session over
-          setLoading(false);
-        }
-      })
-      .catch(function (error) {
-        if (error instanceof CanceledError) {
-          console.log('Aborted: no longer waiting on api req to return result')
-        } else {
-          // second render runs this
-          console.log('api error, maybe alert user in future')
-        }
-      });
+    loadCart(cart.current, controller); // loading set to false on response
     return () => { controller.abort(); }
   },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [])
+    [setLoading, loadCart])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
 
   return (
     <section>
+      {alert.shown && <Alert />}
       <SessionOver />
       {isAuthenticated &&
         <div>
           <p>fill this with info on how to use the website</p>
-          <p>after applying search filter, if refresh or leave then go back to menu will not apply filter again</p>
+          <p>after applying search filter, if refresh will not apply filter again</p>
+          <p>if no menu type is selected for search filter in menu, all menu types are searched</p>
         </div>}
     </section>
   );

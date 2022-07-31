@@ -72,15 +72,26 @@ const cartReducer = function (state, action) {
                 ...state,
                 localCart: cart
             }
+        case 'lock-changes':
+            return {
+                ...state,
+                isCartLocked: true
+            }
+        case 'unlock-changes':
+            return {
+                ...state,
+                isCartLocked: false
+            }
         case 'clear-on-sync':
             return {
                 ...state,
-                changesSinceLastUpload: {}
+                changesSinceLastUpload: {},
+                // isCartLocked: false // let unlock-changes take care of
             }
         case 'mutate-local-cart':
-            const { type, id } = action.payload;
+            const { optionM, id } = action.payload;
             // console.log('mutates')
-            switch (type) {
+            switch (optionM) {
                 case 'add':
                     // [] notation because had item._id initially
                     localCart[id] ? nextLocalCart[id] += 1 : nextLocalCart[id] = 1;
@@ -88,34 +99,40 @@ const cartReducer = function (state, action) {
                     break;
                 case 'remove':
                     // so no empty changesSinceLastUpload
-                    changesSinceLastUpload[id] ? nextCSLU[id] -= 1 : nextCSLU[id] = -1; 
+                    changesSinceLastUpload[id] ? nextCSLU[id] -= 1 : nextCSLU[id] = -1;
                     // don't worry about localCart[id] being undefined because of where remove is called
                     // ternary condition check original (not next) because only doing operation once
                     // won't -2 in one go if there was only 1 in original (one operation)
                     localCart[id] > 1 ? nextLocalCart[id] -= 1 : delete nextLocalCart[id];
+                    break;
+                case 'remove-item':
+                    if (nextLocalCart[id]) {
+                        delete nextLocalCart[id];
+                        nextCSLU[`${id}-removed`] = 1;
+                    }
                     break;
                 default:
                     throw new Error('oopsie no mutation operation on local cart specified');
             }
             console.log(nextLocalCart)
             return {
+                ...state,
                 localCart: nextLocalCart,
                 changesSinceLastUpload: nextCSLU
             }
-        // deprecated
-        // case 'add-change':
-        //     const prevChanges = state.changesSinceLastUpload
-        //     console.log(prevChanges)
-        //     return {
-        //         ...state,
-        //         changesSinceLastUpload: prevChanges.push(
-        //             action.payload.change
-        //         )
-        //     }
         case 'clear-local-cart':
-            // so dashboard listening to changes picks it up, 1 is true
-            nextCSLU['cleared-all'] = 1;
+            const { optionC } = action.payload
+            // switch (optionC) {
+            //     case 'reset':
+            //         break;
+            //     case 'functionality':
+            //         // so dashboard listening to changes picks it up, 1 is true
+            //         nextCSLU['cleared-all'] = 1;
+            //         break;
+            // }
+            if (optionC === 'functionality') { nextCSLU['cleared-all'] = 1; }
             return {
+                ...state,
                 localCart: {},
                 changesSinceLastUpload: nextCSLU
             }

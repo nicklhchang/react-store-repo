@@ -1,12 +1,13 @@
-import React, { useState,useEffect,useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useDashboardContext } from '../app-context/dashboardContext';
 import { useAlertContext } from '../app-context/alertContext';
 import Alert from '../components/Alert';
 import axios, { CanceledError } from 'axios';
 // needed to set cookie in browser, then in dashboard needed to send cookie with axios requests
 axios.defaults.withCredentials = true; // always send cookie to backend because passport wants
 
-const Login = function() {
+const Login = function () {
   /*
   story time: if the updating of state happens in useEffect or functions, the state's
   new value only kicks in after the function/useEffect runs. seems to be finnicky thing
@@ -24,52 +25,75 @@ const Login = function() {
   */
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const { alert,setCustomAlert } = useAlertContext();
-  // const [temp, setTemp] = useState(false);
+  const { alert, setCustomAlert } = useAlertContext();
   let navigate = useNavigate();
 
+  const {
+    toggleSidebar,
+    clearFilterOptions,
+    clearLocalCart,
+    localCart,
+    // currentUser,
+    currentSessionCookie,
+    sidebarFilterOptions,
+    changesSinceLastUpload
+  } = useDashboardContext();
+  const lastCookie = useRef(currentSessionCookie); 
+  lastCookie.current = currentSessionCookie;
+
   // just being a bit fancy and using useCallback instead of doing axios get request in useEffect
-  const fetchAuthStatusLogin = useCallback(function() {
+  const fetchAuthStatusLogin = useCallback(function (controller) {
     // on first render of this route, check if already have active cookie, if so redirect straight to dashboard
-    // btw, useEffect does not like async await
-    const controller = new AbortController();
-    axios.get('http://localhost:8000/api/v1/auth/login-status', { signal: controller.signal })
-    .then(function(response) {
-      // console.log(response.data);
-      const { alreadyAuthenticated,user } = response.data;
-      if (alreadyAuthenticated) {
-        // navigate to dashboard and somehow pass prop
-        navigate('/dashboard',{
-          // need useLocation in /dashboard then location.state.authenticatedUser
-          state:{
-            authenticatedUser:user
+    // btw, useEffect does not like async await unless run an async function inside useEffect
+    if (!(document.cookie === lastCookie.current)) {
+      axios.get('http://localhost:8000/api/v1/auth/login-status', { signal: controller.signal })
+        .then(function (response) {
+          console.log(response.data); // check if the if condition picking up
+          const { alreadyAuthenticated, user } = response.data;
+          if (alreadyAuthenticated) {
+            // won't kick in until after useEffect has run, but before useEffect finishes navigated to dashboard
+            // toggleSidebar('close'); // in case open from last session and user did not refresh (reset whole app state)
+            // clearFilterOptions(); // same deal as closing sidebar above
+            // navigate to dashboard and pass prop
+            navigate('/dashboard', {
+              // need useLocation in /dashboard then location.state.authenticatedUser
+              state: {
+                authenticatedUser: user
+              }
+            });
+          }
+        })
+        .catch(function (error) {
+          if (error instanceof CanceledError) {
+            console.log('Aborted: no longer waiting on api req to return result')
+          } else {
+            console.log('api error, maybe alert user in future')
           }
         });
-      }
-    })
-    .catch(function (error) {
-      if (error instanceof CanceledError) {
-          console.log('Aborted: no longer waiting on api req to return result')
-      } else {
-          console.log('api error, maybe alert user in future')
-      }
-    });
-    return () => {controller.abort();}
+    } else { navigate('/dashboard'); }
   }, [navigate]);
+  // try if (!(document.cookie === currentSessionCookie)) else navigate
+  // if unauthenticate() (clears currentSessionCookie) to get here then ok api get req, 
+  // if unauthenticate; should be undefined === null; evaluates to false
+  // but if just type /auth/login while still authenticated, then prevent api call
 
   useEffect(() => {
-    fetchAuthStatusLogin();
-  }, [fetchAuthStatusLogin]);
+    // when authenticating for a new session, previous session state must be flushed out
+    // make sure there is no cslu, so make user save before navigate back to auth
+    console.log(localCart, sidebarFilterOptions, changesSinceLastUpload) // from last session
+    // clear localCart, sidebar filter, sidebar open, etc. in here
 
-  // useEffect(() => {
-  //   let test = setTimeout(() => {
-  //       setTemp(!temp);
-  //       console.log(justFetchedAuthStatus);
-  //   },500);
-  //   return () => {clearTimeout(test);}
-  // },[temp]);
+    clearLocalCart('reset');
+    // what if same user visit login? clear their cart? revisit dashboard repopulates so no problem
+    toggleSidebar('close');
+    clearFilterOptions();
 
-  const submitLoginCredentials = async function(event) {
+    const controller = new AbortController();
+    fetchAuthStatusLogin(controller);
+    return () => { controller.abort(); }
+  }, [clearLocalCart, toggleSidebar, clearFilterOptions, fetchAuthStatusLogin]);
+
+  const submitLoginCredentials = async function (event) {
     event.preventDefault();
     /* https://stackoverflow.com/questions/42803394/cors-credentials-mode-is-include
     https://stackoverflow.com/questions/68793536/why-cant-i-use-a-wildcard-on-access-control-allow-headers-when-allow-credenti
@@ -79,25 +103,25 @@ const Login = function() {
     more requests can be made with credentials*/
     try {
       const response = await axios.post('http://localhost:8000/api/v1/auth/login', {
-        username:username,
-        password:password
+        username: username,
+        password: password
       });
-      const { loginSuccess,user } = response.data;
+      const { loginSuccess, user } = response.data;
       // use res.json loginSuccess property as a conditional to navigate
       // state values only seem to kick in after this function runs
       if (loginSuccess) {
         // navigate to dashboard and somehow pass prop like justLoggedIn:true
-        navigate('/dashboard',{
-          state:{
-            authenticatedUser:user
+        navigate('/dashboard', {
+          state: {
+            authenticatedUser: user
           }
         });
       } else {
-        setCustomAlert(true,'please use a valid username and correct password');
+        setCustomAlert(true, 'please use a valid username and correct password');
       }
     } catch (error) {
       console.log(error);
-      setCustomAlert(true,'server error');
+      setCustomAlert(true, 'server error');
     }
     setUsername('');
     setPassword('');
@@ -107,27 +131,27 @@ const Login = function() {
     <section className='section-center'>
       <form className='login-form' onSubmit={submitLoginCredentials}>
         <h3>login form</h3>
-        { alert.shown && <Alert /> }
+        {alert.shown && <Alert />}
         <div className='form-control'>
           <input
             type='text'
             className='login'
             placeholder='username'
             value={username}
-            onChange={(event) => {setUsername(event.target.value);}}
+            onChange={(event) => { setUsername(event.target.value); }}
           />
         </div>
-        <br/>
+        <br />
         <div className='form-control'>
           <input
             type='password'
             className='login'
             placeholder='password'
             value={password}
-            onChange={(event) => {setPassword(event.target.value);}}
+            onChange={(event) => { setPassword(event.target.value); }}
           />
         </div>
-        <br/>
+        <br />
         <button type='submit' className='submit-btn'>
           login
         </button>
