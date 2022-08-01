@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import MenuItem from '../components/MenuItem';
 import { useDashboardContext } from '../app-context/dashboardContext';
 import { useAlertContext } from '../app-context/alertContext';
@@ -12,12 +12,13 @@ import MenuSidebar from './MenuSidebar';
 axios.defaults.withCredentials = true; // always send cookie to backend because passport wants
 
 /**
- * if visit /dashboard/menu renders both Dashboard and Menu
+ * if visit /dashboard/menu from non-/dasboard/... route renders both Dashboard and Menu
  */
 const Menu = function () {
     const axiosReqLink = 'http://localhost:8000/api/v1/browse/menu';
     const [pageLessOne, setPageLessOne] = useState(0);
     const [menuPage, setMenuPage] = useState([]);
+    const [emptyMenu, setEmptyMenu] = useState(false);
     // constantly changing but need re-renders for new part of menu when switch pages
     // const pageLessOne = useRef(0);
     // const menuPage = useRef([]);
@@ -36,14 +37,15 @@ const Menu = function () {
     } = useDashboardContext();
     const { alert, setCustomAlert } = useAlertContext();
     // const sidebarOpen = useRef(isSidebarOpen); sidebarOpen.current = isSidebarOpen;
+    // ^ context and useReducer helps to fix if don't want whole page re-render
 
     const logOutUser = useCallback(function () {
         unauthenticate();
-        // causing problems if combine two useEffects, workaround is clearing on login/registration
+        // causing problems if combine two useEffects, workaround is clearing on Dashboard index; Welcome
         // clearFilterOptions();
         setWholeMenu([]);
         setMenuPage([]);
-        // bad bad will clear on backend because syncing, ok without because loads next user's cart on login
+        // ok without because loads next user's cart on Dashboard index; Welcome
         // clearLocalCart();
         // menuPage.current = [];
     }, [setWholeMenu, unauthenticate]) // setMenuPage from this component
@@ -63,113 +65,27 @@ const Menu = function () {
         const { alreadyAuthenticated, user, result } = response.data;
         if (alreadyAuthenticated) {
             authenticate(user, document.cookie);
-            // stores menu as 2d array
-            const paginated = bucket(result);
-            setWholeMenu(paginated);
-            // use paginated instead of wholeMenu because state update kicks in after useEffect
-            // by default start at page zero to prevent bug if on page e.g. 3 but only load 2 pages
-            setMenuPage(paginated[0]);
-            // menuPage.current = paginated[0];
+            if (result.length) {
+                console.log('authenticated and not empty menu')
+                // stores menu as 2d array
+                const paginated = bucket(result);
+                setWholeMenu(paginated);
+                // use paginated instead of wholeMenu because state update kicks in after useEffect
+                // by default start at page zero to prevent bug if on page e.g. 3 but only load 2 pages
+                setMenuPage(paginated[0]);
+                // menuPage.current = paginated[0];
+                setEmptyMenu(false); // in case set to true before
+            } else {
+                setWholeMenu([]);
+                setMenuPage([]);
+                setEmptyMenu(true);
+            }
         } else {
             // must set all states because visiting this route, on first render its first job
             // is to check whether or not still authenticated.
             logOutUser();
         }
     }, [authenticate, logOutUser, setWholeMenu])
-
-    // useEffect(() => {
-    //     setLoading(true);
-    //     // console.log('initial render fetch whole menu')
-    //     const controller = new AbortController();
-    //     axios.get(axiosReqLink, { signal: controller.signal })
-    //         .then(function (response) {
-    //             console.log('being handled whole menu')
-    //             handleAxiosGetThen(response);
-    //             setLoading(false);
-    //         })
-    //         .catch(function (error) {
-    //             // must be cancelled before receivig a response from backend
-    //             if (error instanceof CanceledError) {
-    //                 // note: second render will run cleanup function 
-    //                 // (clean up from first render before running useEffect again),
-    //                 // and hence second render (second request) is aborted and logs this to console
-    //                 // cleanup function also run when component unmounted e.g switch from menu to welcome
-    //                 console.log('Aborted: no longer waiting on api req to return result')
-    //             } else {
-    //                 console.log('api error, maybe alert user in future')
-    //             }
-    //         });
-    //     return () => {
-    //         /**
-    //          * cancels request before component unmounts (unmounts; no longer need result of api fetch.
-    //          * no need to run useEffect() anymore, so need to 'cancel' the request before response received
-    //          * and .then() taken. else if api sends result, the not needed result leads to 'memory leak'.)
-    //          * React throws hissy fit when this happens, so need this cleanup return function.
-    //          * cleanup aborts the api request so no results come back and hang there to piss off React.
-    //          * needed if user switch too quickly between menu and e.g. welcome; faster than time taken to reach api
-    //         */
-    //         setLoading(false);
-    //         controller.abort();
-    //     }
-    // },
-    //     // empty dep array makes it run only on initial render and never again; wanted because if not empty 
-    //     // and without eslint-disable..., any state change (this functional component or in context)
-    //     // will trigger this useEffect() to run, which messes with display
-    //     // eslint-disable-next-line react-hooks/exhaustive-deps
-    //     []);
-
-    // useEffect(() => {
-    //     // if leave menu tab while loading custom search filter, next time hit menu tab
-    //     // will automatically appy filter because filter only cleared on response
-    //     console.log('running custom menu useeffect', sidebarFilterOptions)
-    //     const controller = new AbortController();
-    //     if (Object.keys(sidebarFilterOptions).length) {
-    //         // set to default; must have or breaks if on page 3 and filter returns 2 pages
-    //         setPageLessOne(0);
-    //         // pageLessOne.current = 0;
-    //         // axios str construction
-    //         const { mealTypes, budgetPrice } = sidebarFilterOptions
-    //         let getReqStr = axiosReqLink;
-    //         console.log(mealTypes, budgetPrice)
-    //         if (mealTypes && budgetPrice) {
-    //             getReqStr += `?price=${budgetPrice}`;
-    //             if (mealTypes.length) {
-    //                 const mealsStr = mealTypes.join()
-    //                 getReqStr += ('&types=' + mealsStr);
-    //             }
-    //         }
-    //         setLoading(true);
-    //         axios.get(getReqStr, { signal: controller.signal })
-    //             .then(function (response) {
-    //                 console.log('being handled custom menu')
-    //                 handleAxiosGetThen(response);
-    //                 clearFilterOptions();
-    //                 setLoading(false);
-    //             })
-    //             .catch(function (error) {
-    //                 // console.log(error) // because Axios becomes CanceledError not AbortError (fetch api)
-    //                 if (error instanceof CanceledError) {
-    //                     console.log('Aborted: no longer waiting on api req to return result')
-    //                 } else {
-    //                     console.log('api error, maybe alert user in future')
-    //                 }
-    //             });
-    //     }
-    //     // cleanup if need to abort, so no hanging results that piss off React
-    //     // if somehow sidebarFilterOptions changes or component unmounts (runs useEffect() again)
-    //     // before receiving backend api response, will 'abort' that request to prevent memory leak
-    //     // if response not received will not clearFilterOptions() so next time run useEffect()
-    //     // no problems aborting (cleanup requires non empty sidebarFilterOptions)
-    //     return () => {
-    //         if (Object.keys(sidebarFilterOptions).length) {
-    //             setLoading(false);
-    //             controller.abort();
-    //         }
-    //     } // sidebarFilterOptions is the most important in dep array, must run every time it changes
-    // },
-    //     // prevents re renders because state from dashboardContext changes
-    //     // eslint-disable-next-line react-hooks/exhaustive-deps
-    //     [sidebarFilterOptions]);
 
     useEffect(() => {
         /**
@@ -241,7 +157,7 @@ const Menu = function () {
             controller.abort();
         }
     },
-        [sidebarFilterOptions,
+        [sidebarFilterOptions, // runs whenever sidebarFilterOptions changes
             handleAxiosGetThen,
             setCustomAlert,
             setLoading,
@@ -304,11 +220,11 @@ const Menu = function () {
             <Loading />
             {!!isAuthenticated && !loading && <section>
                 {isSidebarOpen && <MenuSidebar />}
-                <section>
-                    {!isSidebarOpen &&
-                        <button className='sidebar-toggle' onClick={() => { toggleSidebar('open') }}>
-                            <FaBars />
-                        </button>}
+                {!isSidebarOpen &&
+                    <button className='sidebar-toggle' onClick={() => { toggleSidebar('open') }}>
+                        <FaBars />
+                    </button>}
+                {!emptyMenu && <section>
                     <h2 className='section-title'>menu items</h2>
                     <h3>{`Total: ${calcWholeMenu()}`}</h3>
                     <div className='menu-center'>
@@ -319,31 +235,34 @@ const Menu = function () {
                             );
                         })}
                     </div>
-                </section>
-                {wholeMenu.length && <div className='btn-container'>
-                    {(pageLessOne > 0) &&
-                        <button
-                            className='prev-btn'
-                            onClick={() => { handlePaginateButtons({ type: 'prev', pageNum: null }) }}>
-                            prev
-                        </button>}
-                    {wholeMenu.map((arr, menuIndex) => {
-                        // in paginating with 2d array, using array index as key no problem; order no matter
-                        return (
+                    {wholeMenu.length && <div className='btn-container'>
+                        {(pageLessOne > 0) &&
                             <button
-                                key={arr[0]._id}
-                                onClick={() => { handlePaginateButtons({ type: 'custom', pageNum: menuIndex }) }}>
-                                {menuIndex + 1}
-                            </button>
-                        );
-                    })}
-                    {(pageLessOne < wholeMenu.length - 1) &&
-                        <button
-                            className='next-btn'
-                            onClick={() => { handlePaginateButtons({ type: 'next', pageNum: null }) }}>
-                            next
-                        </button>}
-                </div>}
+                                className='prev-btn'
+                                onClick={() => { handlePaginateButtons({ type: 'prev', pageNum: null }) }}>
+                                prev
+                            </button>}
+                        {wholeMenu.map((arr, menuIndex) => {
+                            // in paginating with 2d array, using array index as key no problem; order no matter
+                            return (
+                                <button
+                                    key={arr[0]._id}
+                                    onClick={() => { handlePaginateButtons({ type: 'custom', pageNum: menuIndex }) }}>
+                                    {menuIndex + 1}
+                                </button>
+                            );
+                        })}
+                        {(pageLessOne < wholeMenu.length - 1) &&
+                            <button
+                                className='next-btn'
+                                onClick={() => { handlePaginateButtons({ type: 'next', pageNum: null }) }}>
+                                next
+                            </button>}
+                    </div>}
+                </section>}
+                {!!emptyMenu && <section>
+                    <p>Oops, no menu items match your filter options</p>
+                </section>}
             </section>}
         </section>
     );

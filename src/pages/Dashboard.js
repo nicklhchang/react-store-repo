@@ -1,12 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, Link } from 'react-router-dom';
-// import Alert from '../components/Alert';
 import { useDashboardContext } from '../app-context/dashboardContext';
 import { useAlertContext } from '../app-context/alertContext';
 import { FaBars } from 'react-icons/fa'
 import axios from 'axios';
 axios.defaults.withCredentials = true; // always send cookie to backend because passport wants
-
 
 /**
  * problem is that location.state does not persist changes between page refreshes, the logic without else delete
@@ -174,17 +172,6 @@ const Dashboard = function () {
               {/* Welcome checks whether auth or not upon visiting /dashboard; index element (App.js) */}
               <Link to='/dashboard'>welcome</Link>
               <Link to='/dashboard/menu'>menu</Link>
-              {/* <Menu menuItems={currentMenu}/> */}
-              {/* <section>
-                <h2 className='section-title'>all menu items</h2>
-                <div className='menu-item-center'>
-                  {currentMenu.map((item) => {
-                    return (
-                      <Item key={item._id} {...item}/>
-                    );
-                  })}
-                </div>
-              </section> */}
               <Link to='/dashboard/cart'>cart</Link>
             </section>
           </div>

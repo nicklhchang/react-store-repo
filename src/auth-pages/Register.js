@@ -12,11 +12,11 @@ const Login = function () {
   const [password, setPassword] = useState('');
   const [pwdVerify, setPwdVerify] = useState('');
   const [email, setEmail] = useState('');
-  
-  const { 
+
+  const {
     clearLocalCart,
     toggleSidebar,
-    clearFilterOptions
+    clearFilter
   } = useDashboardContext();
   const { alert, setCustomAlert } = useAlertContext();
   let navigate = useNavigate();
@@ -24,9 +24,8 @@ const Login = function () {
   useEffect(() => {
     clearLocalCart('reset');
     // what if same user visit? clear their cart? revisit dashboard repopulates so no problem
-    toggleSidebar('close');
-    clearFilterOptions();
-  }, [clearLocalCart, toggleSidebar, clearFilterOptions])
+    clearFilter();
+  }, [clearLocalCart, toggleSidebar])
 
   const submitRegisterCredentials = async function (event) {
     event.preventDefault();
@@ -53,12 +52,14 @@ const Login = function () {
           // these properties only exist if requestSuccess
           const { loginSuccess, user } = response.data;
           if (loginSuccess) {
-            navigate('/dashboard', {
-              // need useLocation in /dashboard so location.state.authenticatedUser
-              state: {
-                authenticatedUser: user
-              }
-            });
+            navigate('/dashboard',
+              // {
+              //   // need useLocation in /dashboard so location.state.authenticatedUser
+              //   state: {
+              //     authenticatedUser: user
+              //   }
+              // }
+            );
           } else if (user === 'duplicate') {
             setCustomAlert(true, 'use email and username which have not been taken');
           }
@@ -79,6 +80,7 @@ const Login = function () {
       <form className='login-form' onSubmit={submitRegisterCredentials}>
         <h3>register form</h3>
         <h4>*please do not re-use another one of your passwords for this</h4>
+        {/* any form of alert like unauthenticated please authenticate again will show */}
         {alert.shown && <Alert />}
         <div className='form-control'>
           <input

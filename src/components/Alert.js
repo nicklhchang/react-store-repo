@@ -25,7 +25,7 @@ const Alert = function() {
         let countdown = setTimeout(() => {
             alertOver();
         },3500);
-        // cleanup whenever something in dependency array changes,
+        // cleanup whenever something in dep array changes or component unmounts,
         // then useEffect() sets up new time out
         return () => {clearTimeout(countdown);}
     },[alertOver,alert.shown]);

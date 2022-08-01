@@ -36,6 +36,10 @@ const DashboardProvider = function ({ children }) {
   const [loading, setLoading] = useState(true);
   const [wholeMenu, setWholeMenu] = useState([]);
   const [itemPrices, setItemPrices] = useState({});
+  const [checkedOptions, setCheckedOptions] = useState(
+    new Array(6).fill(false) // hard-coded for now
+  );
+  const [maxPrice, setMaxPrice] = useState(30);
 
   // wrapped dashboard provider inside alert provider
   const { setCustomAlert } = useAlertContext();
@@ -45,6 +49,7 @@ const DashboardProvider = function ({ children }) {
   const [cartState, cartDispatch] = useReducer(cartReducer, stateCart);
 
   // all the useCallback's prevent infinite loop when placing these functions in dep arr
+  // something like a new reference created for function whenever called, so 'change' cause re-render
 
   // authentication related
   const authenticate = useCallback(function (user, sessionCookie) {
@@ -68,6 +73,14 @@ const DashboardProvider = function ({ children }) {
   const clearFilterOptions = useCallback(function () {
     sidebarDispatch({ type: 'clear' });
   }, [])
+
+  const clearFilter = useCallback(function () {
+    clearFilterOptions();
+    // visually must change
+    setCheckedOptions(new Array(6).fill(false)); // hard-coded for now
+    setMaxPrice(30);
+    toggleSidebar('close');
+  }, [clearFilterOptions, setCheckedOptions, setMaxPrice, toggleSidebar])
 
   // cart state
   const populateCartInitial = useCallback(function (items) {
@@ -129,30 +142,6 @@ const DashboardProvider = function ({ children }) {
     // setCustomAlert not wrapped in a useCallback
     [authenticate, populateCartInitial, setCustomAlert, unauthenticate])
 
-  // // add remove (-1) and remove item can probably be wrapped into one
-  // const addToCart = useCallback(function (lockStatus, id) {
-  //   lockStatus
-  //     ? setCustomAlert(true, 'please wait a moment for your changes to sync')
-  //     : mutateLocalCart('add', id);
-  // },
-  //   // setCustomAlert not wrapped in a useCallback
-  //   [mutateLocalCart, setCustomAlert])
-
-  // const removeFromCart = useCallback(function (lockStatus, id) {
-  //   lockStatus
-  //     ? setCustomAlert(true, 'please wait a moment for your changes to sync')
-  //     : mutateLocalCart('remove', id);
-  // },
-  //   // setCustomAlert not wrapped in a useCallback
-  //   [mutateLocalCart, setCustomAlert])
-
-  // const removeItemFromCart = useCallback(function (lockStatus, id) {
-  //   // should implement checking if property exists 
-  //   lockStatus
-  //     ? setCustomAlert(true, 'please wait a moment for your changes to sync')
-  //     : mutateLocalCart('remove-item', id);
-  // }, [mutateLocalCart, setCustomAlert])
-
   const mutateCartCheckLock = useCallback(function (lockStatus, mutation, id) {
     lockStatus
       ? setCustomAlert(true, 'please wait a moment for your changes to sync')
@@ -166,6 +155,10 @@ const DashboardProvider = function ({ children }) {
     setItemPrices,
     wholeMenu,
     setWholeMenu,
+    checkedOptions,
+    setCheckedOptions,
+    maxPrice,
+    setMaxPrice,
     ...authState,
     authenticate,
     unauthenticate,
@@ -173,6 +166,7 @@ const DashboardProvider = function ({ children }) {
     toggleSidebar,
     setFilterOptions,
     clearFilterOptions,
+    clearFilter,
     ...cartState,
     populateCartInitial,
     lockCart,
@@ -181,9 +175,6 @@ const DashboardProvider = function ({ children }) {
     mutateLocalCart,
     clearLocalCart,
     loadCart,
-    // addToCart,
-    // removeFromCart,
-    // removeItemFromCart,
     mutateCartCheckLock
   }}>
     {children}

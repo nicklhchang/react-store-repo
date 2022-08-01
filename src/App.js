@@ -1,14 +1,6 @@
 import React, {  } from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom'
 
-import AuthIndex from './auth-pages/AuthIndex';
-import Register from './auth-pages/Register';
-import Login from './auth-pages/Login';
-
-import Welcome from './dashboard-pages/Welcome';
-import Menu from './dashboard-pages/Menu';
-import Cart from './dashboard-pages/Cart';
-
 /** 
  * lazy loading implements code splitting so that the large bundle file
  * that loads and serves all application code is split into chunks.
@@ -26,6 +18,14 @@ const Home = React.lazy(() => import('./pages/Home'));
 const Dashboard = React.lazy(() => import('./pages/Dashboard'));
 const AuthNavbar = React.lazy(() => import('./auth-pages/AuthNavbar'));
 const Error = React.lazy(() => import('./pages/Error'));
+
+const AuthIndex = React.lazy(() => import('./auth-pages/AuthIndex'));
+const Register = React.lazy(() => import('./auth-pages/Register'));
+const Login = React.lazy(() => import('./auth-pages/Login'));
+
+const Welcome = React.lazy(() => import('./dashboard-pages/Welcome'));
+const Menu = React.lazy(() => import('./dashboard-pages/Menu'));
+const Cart = React.lazy(() => import('./dashboard-pages/Cart'));
 
 function App() {
   return (

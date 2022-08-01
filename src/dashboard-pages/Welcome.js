@@ -40,7 +40,6 @@ const Welcome = function () {
       {isAuthenticated &&
         <div>
           <p>fill this with info on how to use the website</p>
-          <p>after applying search filter, if refresh will not apply filter again</p>
           <p>if no menu type is selected for search filter in menu, all menu types are searched</p>
         </div>}
     </section>

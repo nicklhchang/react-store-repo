@@ -17,6 +17,9 @@ const Login = function () {
   one way to get around late state update is to not use state, just check response.data....
   instead of setIsAuthenticated(response.data....)
 
+  OR useRef to track states in real time and combine this with states from useContext,
+  then use reducer functions to dispatch updates to state; works a charm
+
   useEffect() runs twice intentionally in StrictMode, making two axios requests seems inevitable
   because both times useEffect() runs exactly the same; states do not change between the two renders 
   (cannot alter states to make request first time and no request second time)
@@ -31,14 +34,14 @@ const Login = function () {
   const {
     toggleSidebar,
     clearFilterOptions,
+    clearFilter,
     clearLocalCart,
     localCart,
-    // currentUser,
     currentSessionCookie,
     sidebarFilterOptions,
     changesSinceLastUpload
   } = useDashboardContext();
-  const lastCookie = useRef(currentSessionCookie); 
+  const lastCookie = useRef(currentSessionCookie);
   lastCookie.current = currentSessionCookie;
 
   // just being a bit fancy and using useCallback instead of doing axios get request in useEffect
@@ -49,18 +52,20 @@ const Login = function () {
       axios.get('http://localhost:8000/api/v1/auth/login-status', { signal: controller.signal })
         .then(function (response) {
           console.log(response.data); // check if the if condition picking up
-          const { alreadyAuthenticated, user } = response.data;
+          const { alreadyAuthenticated } = response.data; // can access user property if needed too
           if (alreadyAuthenticated) {
             // won't kick in until after useEffect has run, but before useEffect finishes navigated to dashboard
             // toggleSidebar('close'); // in case open from last session and user did not refresh (reset whole app state)
             // clearFilterOptions(); // same deal as closing sidebar above
             // navigate to dashboard and pass prop
-            navigate('/dashboard', {
-              // need useLocation in /dashboard then location.state.authenticatedUser
-              state: {
-                authenticatedUser: user
-              }
-            });
+            navigate('/dashboard',
+              // {
+              //   // need useLocation in /dashboard then location.state.authenticatedUser
+              //   state: {
+              //     authenticatedUser: user
+              //   }
+              // }
+            );
           }
         })
         .catch(function (error) {
@@ -81,17 +86,16 @@ const Login = function () {
     // when authenticating for a new session, previous session state must be flushed out
     // make sure there is no cslu, so make user save before navigate back to auth
     console.log(localCart, sidebarFilterOptions, changesSinceLastUpload) // from last session
+    
     // clear localCart, sidebar filter, sidebar open, etc. in here
-
     clearLocalCart('reset');
     // what if same user visit login? clear their cart? revisit dashboard repopulates so no problem
-    toggleSidebar('close');
-    clearFilterOptions();
+    clearFilter();
 
     const controller = new AbortController();
     fetchAuthStatusLogin(controller);
     return () => { controller.abort(); }
-  }, [clearLocalCart, toggleSidebar, clearFilterOptions, fetchAuthStatusLogin]);
+  }, [clearLocalCart, clearFilter, fetchAuthStatusLogin]);
 
   const submitLoginCredentials = async function (event) {
     event.preventDefault();

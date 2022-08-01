@@ -4,7 +4,6 @@ import { useDashboardContext } from '../app-context/dashboardContext';
 const Item = React.memo(function ({ _id, name, cost, classification }) {
     const {
         isCartLocked,
-        // addToCart,
         mutateCartCheckLock
     } = useDashboardContext();
     return (

@@ -1,46 +1,38 @@
-import React, { useEffect, useState } from 'react'
+import React, {  } from 'react'
 import { useDashboardContext } from '../app-context/dashboardContext';
 import { FaTimes } from 'react-icons/fa';
-import { useNavigate } from 'react-router-dom';
 
 const menuOptionsEnum = ['Appetiser', 'Small', 'Medium', 'Large', 'Drink', 'Dessert'];
 
 const MenuSidebar = function () {
     // pass to setFilterOptions
-    // const [checkedMenuOptions,setCheckedMenuOptions] = useState([]);
-    const [checkedOptions, setCheckedOptions] = useState(
-        new Array(menuOptionsEnum.length).fill(false)
-    );
-    const [maxPrice, setMaxPrice] = useState(30);
-    // const [temp, setTemp] = useState(false);
+    // const [checkedOptions, setCheckedOptions] = useState(
+    //     new Array(menuOptionsEnum.length).fill(false)
+    // );
+    // const [maxPrice, setMaxPrice] = useState(30);
     const {
+        checkedOptions,
+        setCheckedOptions,
+        maxPrice,
+        setMaxPrice,
         currentSessionCookie,
         unauthenticate,
         isSidebarOpen,
         toggleSidebar,
         sidebarFilterOptions,
         setFilterOptions,
-        clearFilterOptions
+        clearFilter
     } = useDashboardContext();
-    // let navigate = useNavigate();
-
-    // useEffect(() => {
-    //     let test = setTimeout(() => {
-    //         setTemp(!temp);
-    //         console.log(checkedOptions);
-    //     },500);
-    //     return () => {clearTimeout(test);}
-    // },[temp]);
 
     const onCheck = function (index) {
         if (document.cookie === currentSessionCookie) {
             const nextCheckedOptions = checkedOptions.map((bool, i) => {
                 return (index === i ? !bool : bool);
             });
-            // console.log(nextCheckedOptions)
+            console.log(nextCheckedOptions)
             setCheckedOptions(nextCheckedOptions);
         } else {
-            clearFilterOptions(); // else next render of Menu will use filter
+            clearFilter(); // else next render of Menu will use filter
             unauthenticate();
         }
     }
@@ -51,7 +43,7 @@ const MenuSidebar = function () {
         if (document.cookie === currentSessionCookie) {
             setMaxPrice(event.target.value);
         } else {
-            clearFilterOptions();
+            clearFilter();
             unauthenticate();
         }
     }
@@ -63,18 +55,24 @@ const MenuSidebar = function () {
         event.preventDefault();
         // auth status checked by axios get to backend
         const filterArr = [];
-        checkedOptions.forEach((bool, index) => {
-            if (bool) { filterArr.push(menuOptionsEnum[index]) }
-        });
-        // console.log(filterArr)
+        // use .every() so if every bool is false (empty arr) populate with full
+        // takes one option to be true to 'ruin' it; don't select all
+        const selectAll = checkedOptions.every((option) => {return !option;});
+        if (selectAll) {
+            menuOptionsEnum.forEach((option) => {filterArr.push(option)});
+        } else {
+            checkedOptions.forEach((bool, index) => {
+                if (bool) { filterArr.push(menuOptionsEnum[index]) }
+            });
+        }
+        console.log(filterArr)
         setFilterOptions(filterArr, maxPrice);
         toggleSidebar('close');
     }
 
     const onClearFilter = function (event) {
         event.preventDefault();
-        clearFilterOptions();
-        toggleSidebar('close');
+        clearFilter();
     }
 
     return (
@@ -98,10 +96,10 @@ const MenuSidebar = function () {
                                 value={option}
                                 checked={checkedOptions[index]}
                                 onChange={() => {
-                                    // never have two setState's inside here, very weird behaviour
+                                    // never set two states inside here, very weird behaviour
                                     onCheck(index);
-                                    /* reason below does not work is because checkedOptions does not seem
-                                    // to get mutated enough i.e not new object so no state change 
+                                    /* // reason below does not work is because checkedOptions does not seem
+                                    // to get mutated i.e not new object so no state change 
                                     // means no update in component; React slightly finnicky
                                     checkedOptions[index] = !checkedOptions[index]
                                     setCheckedOptions(checkedOptions) */
@@ -144,7 +142,6 @@ const MenuSidebar = function () {
                 {sidebarFilterOptions.mealTypes.map((type) => {
                     return (<li key={type}>{type}</li>);
                 })}
-                {/* <h4>{sidebarFilterOptions.budgetPrice}</h4> */}
             </div>}
         </aside>
     );
