@@ -29,7 +29,8 @@ const Dashboard = function () {
     isCartLocked,
     lockCart,
     unlockCart,
-    clearChangesOnSync
+    clearChangesOnSync,
+    uploadLocalCart
   } = useDashboardContext();
   const {
     setCustomAlert
@@ -68,47 +69,7 @@ const Dashboard = function () {
       // interval not timeout, runs at interval instead of once when timeout
       // console.log('regular upload', cslu.current, lock.current);
       // look at onMouseLeave to trigger save cart message
-      const notChanged = Object.values(cslu.current)
-        .every((change) => { return change === 0; });
-      /** .every() returns true by default if array empty; empty means notChanged true
-       *  all comparisons must be true for .every() to return true; only takes one falsy to ruin it
-       *  notChanged easier than changed:
-       *  so if did changed (change !== 0) takes one value of 0 (e.g. +1 -1) to set to false (incorrect
-       *  because what if other item id's have non-zero value; a change did happen)
-       *  if do notChanged (change === 0) takes one non-zero value (e.g. +1) to set to false (correct)
-       *  need double negation below as a result */
-      console.log(cslu.current, Object.values(cslu.current), notChanged)
-      if (!notChanged) {
-        lockCart(); // state updates by end of this if loop (.then() resolves after ?)
-        axios.post('http://localhost:8000/api/v1/browse/cart/sync', {
-          cart: cart.current
-        }, {
-          cancelToken: source.token
-        }).then(function (response) {
-          /** 
-           * could be an issue if before promise resolves with response from backend,
-           * changesSinceLastUpload is mutated, and hence any new changes to cart 
-           * between making post request and receiving response will be cleared in this .then(). 
-           * and unless another change is made later, runs risk of front and backend carts not in sync.
-           * potential workaround is 'reconcile' local cart to backend upon session over.
-           * even then, there will be interval of time when back and frontend carts out of sync
-           * this interval of time depends on when next change (after the missed changes) is made.
-           * 
-           * have thought about locking the changesSinceLastUpload and localCart until sync resolves
-           * but using a state for that, new state only kick in after the useEffect runs; never.
-           * maybe useReducer will fix ? seems to; dispatch updates state (using useReducer) 
-           * by the end of if loop, .then() resolves after if loop runs ?
-          */
-          console.log(response.data, lock.current)
-          const { requestSuccess } = response.data;
-          if (requestSuccess) { clearChangesOnSync(); unlockCart(); }
-        }).catch(function (error) {
-          console.log(error)
-          setCustomAlert(true, 'error saving your cart')
-          unlockCart();
-        });
-        // unlockCart(); // if move out of .then .catch, buggy because then catch is non-blocking?
-      }
+      uploadLocalCart(source, cslu.current, cart.current);
     }, 15000);
     return () => {
       // cleans up only when unmounting, this useEffect does not run over and over, 
@@ -123,9 +84,10 @@ const Dashboard = function () {
     [clearChangesOnSync, lockCart, setCustomAlert, unlockCart]);
 
   useEffect(() => {
-    const sessionEvent = new EventSource('http://localhost:8000/api/v1/auth/timeout', {
+    const sessionEvent = new EventSource('http://localhost:8080/api/v1/auth/timeout', {
       withCredentials: true
     });
+    const source = axios.CancelToken.source();
 
     sessionEvent.addEventListener('unauthenticated', (event) => {
       // data must be in .write() to actually pick up unauthenticated event
@@ -133,24 +95,25 @@ const Dashboard = function () {
       // not sure about this, depends if rendering alert even if not authenticated
       setCustomAlert(true, 'session over now, you will need to authenticate again')
       sessionEvent.close();
-    })
+      // in future, maybe let this event save cart. 1.5 seconds for final save to go through
+      uploadLocalCart(source, cslu.current, cart.current);
+    });
 
     sessionEvent.addEventListener("almost-timeout", (event) => {
       console.log(event.data);
       // server side; res.write(`event:session-timeout\ndata:{"time-left":${var}}\n\n`)
       const parsed = JSON.parse(event.data);
       // console.log(parsed, parsed["time-left"])
-      setCustomAlert(true, `${parsed["time-left"]} seconds left. Please save your cart.`)
-      // in future, maybe let an event save cart
+      setCustomAlert(true, `${parsed["time-left"]} seconds left. No rush :). Just using server-sent events.`)
     });
 
     sessionEvent.addEventListener("error", (event) => {
       console.log(`gracefully handled`, event);
-      sessionEvent.close(); // when there is an error close it
+      sessionEvent.close();
     })
-
-    return () => { sessionEvent.close(); } // when unmounting
-  }, [setCustomAlert]);
+    // cleanup when unmounting
+    return () => { sessionEvent.close(); source.cancel(); }
+  }, [setCustomAlert, uploadLocalCart]);
 
   return (
     <section>
