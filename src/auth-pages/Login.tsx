@@ -32,20 +32,20 @@ const Login = function () {
   let navigate = useNavigate();
 
   const {
-    toggleSidebar,
-    clearFilterOptions,
+    // toggleSidebar,
+    // clearFilterOptions,
     clearFilter,
     clearLocalCart,
-    localCart,
+    // localCart,
     currentSessionCookie,
-    sidebarFilterOptions,
-    changesSinceLastUpload
+    // sidebarFilterOptions,
+    // changesSinceLastUpload
   } = useDashboardContext();
   const lastCookie = useRef(currentSessionCookie);
   lastCookie.current = currentSessionCookie;
 
   // just being a bit fancy and using useCallback instead of doing axios get request in useEffect
-  const fetchAuthStatusLogin = useCallback(function (controller) {
+  const fetchAuthStatusLogin = useCallback(function (controller: AbortController) {
     // on first render of this route, check if already have active cookie, if so redirect straight to dashboard
     // btw, useEffect does not like async await unless run an async function inside useEffect
     if (!(document.cookie === lastCookie.current)) {
@@ -85,7 +85,7 @@ const Login = function () {
   useEffect(() => {
     // when authenticating for a new session, previous session state must be flushed out
     // make sure there is no cslu, so make user save before navigate back to auth
-    console.log(localCart, sidebarFilterOptions, changesSinceLastUpload) // from last session
+    // console.log(localCart, sidebarFilterOptions, changesSinceLastUpload) // from last session
     
     // clear localCart, sidebar filter, sidebar open, etc. in here
     clearLocalCart('reset');
@@ -97,7 +97,7 @@ const Login = function () {
     return () => { controller.abort(); }
   }, [clearLocalCart, clearFilter, fetchAuthStatusLogin]);
 
-  const submitLoginCredentials = async function (event) {
+  const submitLoginCredentials = async function (event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     /* https://stackoverflow.com/questions/42803394/cors-credentials-mode-is-include
     https://stackoverflow.com/questions/68793536/why-cant-i-use-a-wildcard-on-access-control-allow-headers-when-allow-credenti

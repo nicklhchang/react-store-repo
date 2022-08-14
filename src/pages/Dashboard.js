@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, Link } from 'react-router-dom';
 import { useDashboardContext } from '../app-context/dashboardContext';
-import { useAlertContext } from '../app-context/alertContext';
+import { useAlertContext } from '../app-context/alertContext.tsx';
 import { FaBars } from 'react-icons/fa'
 import axios from 'axios';
 axios.defaults.withCredentials = true; // always send cookie to backend because passport wants
@@ -29,7 +29,6 @@ const Dashboard = function () {
     isCartLocked,
     lockCart,
     unlockCart,
-    clearChangesOnSync,
     uploadLocalCart
   } = useDashboardContext();
   const {
@@ -81,15 +80,21 @@ const Dashboard = function () {
   },
     // useRef and .current avoid placing states in dep array; prevent re-renders
     // to keep track of changing state (in real time) and updating state, useReducer dispatches
-    [clearChangesOnSync, lockCart, setCustomAlert, unlockCart]);
+    [uploadLocalCart]);
 
   useEffect(() => {
-    const sessionEvent = new EventSource('http://localhost:8080/api/v1/auth/timeout', {
+    unlockCart();
+    const sessionEvent = new EventSource('http://localhost:8000/api/v1/auth/timeout', {
       withCredentials: true
     });
     const source = axios.CancelToken.source();
 
+    // notify users they now unauthenticated, their next action will unauthenticate them on frontend
+    // true backend unauthenticated happens 1.5 seconds later, should be enough time for final save to go through
+    // but there is that small 1.5 second gap, if user make change to cart, won't sync
+    // not a big deal, could implement lockCart() below but then would need to unlockCart() at some other point
     sessionEvent.addEventListener('unauthenticated', (event) => {
+      lockCart();
       // data must be in .write() to actually pick up unauthenticated event
       console.log('backend telling frontend to close', event.data)
       // not sure about this, depends if rendering alert even if not authenticated
@@ -99,6 +104,7 @@ const Dashboard = function () {
       uploadLocalCart(source, cslu.current, cart.current);
     });
 
+    // notify users of however much time left is in their session
     sessionEvent.addEventListener("almost-timeout", (event) => {
       console.log(event.data);
       // server side; res.write(`event:session-timeout\ndata:{"time-left":${var}}\n\n`)
@@ -106,14 +112,15 @@ const Dashboard = function () {
       // console.log(parsed, parsed["time-left"])
       setCustomAlert(true, `${parsed["time-left"]} seconds left. No rush :). Just using server-sent events.`)
     });
-
+    
+    // oopsies close sse stream on server error
     sessionEvent.addEventListener("error", (event) => {
       console.log(`gracefully handled`, event);
       sessionEvent.close();
     })
     // cleanup when unmounting
     return () => { sessionEvent.close(); source.cancel(); }
-  }, [setCustomAlert, uploadLocalCart]);
+  }, [setCustomAlert, uploadLocalCart, lockCart, unlockCart]);
 
   return (
     <section>
@@ -121,7 +128,7 @@ const Dashboard = function () {
         <section className='nav-center'>
           {/* {alert.shown && <Alert />} */}
           <div className='nav-header'>
-            <h4>{`Dashboard for: ${currentUser ? currentUser._id : 'unauthenticated'}`}</h4>
+            <h4>{`Dashboard for: ${currentUser ? currentUser.username : 'unauthenticated'}`}</h4>
             <button className='nav-toggle' onClick={() => {
               setShowLinks(
                 (showLinks) => { return !showLinks; }

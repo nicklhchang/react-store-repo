@@ -3,9 +3,9 @@ import ReactDOM from 'react-dom/client';
 import './index.css';
 import App from './App';
 // import reportWebVitals from './reportWebVitals';
-import { AlertProvider } from './app-context/alertContext';
+import { AlertProvider } from './app-context/alertContext.tsx';
 import { DashboardProvider } from './app-context/dashboardContext';
-import ComposeProviders from './app-context/context';
+import ComposeProviders from './app-context/context.tsx';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(

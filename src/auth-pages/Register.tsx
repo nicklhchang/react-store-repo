@@ -15,7 +15,7 @@ const Login = function () {
 
   const {
     clearLocalCart,
-    toggleSidebar,
+    // toggleSidebar,
     clearFilter
   } = useDashboardContext();
   const { alert, setCustomAlert } = useAlertContext();
@@ -25,9 +25,9 @@ const Login = function () {
     clearLocalCart('reset');
     // what if same user visit? clear their cart? revisit dashboard repopulates so no problem
     clearFilter();
-  }, [clearLocalCart, toggleSidebar])
+  }, [clearLocalCart, clearFilter])
 
-  const submitRegisterCredentials = async function (event) {
+  const submitRegisterCredentials = async function (event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (pwdVerify !== password) {
       setCustomAlert(true, 'passwords don\'t match');
@@ -62,6 +62,8 @@ const Login = function () {
             );
           } else if (user === 'duplicate') {
             setCustomAlert(true, 'use email and username which have not been taken');
+          } else {
+            setCustomAlert(true, user); // user can also be a message when no Member
           }
         }
       } catch (error) {
