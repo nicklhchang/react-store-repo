@@ -216,8 +216,8 @@ const Menu = function () {
     return (
         <section>
             {alert.shown && <Alert />}
-            <SessionOver />
-            <Loading />
+            {!isAuthenticated && !loading && <SessionOver />}
+            {!!loading && <Loading />}
             {!!isAuthenticated && !loading && <section>
                 {isSidebarOpen && <MenuSidebar />}
                 {!isSidebarOpen &&

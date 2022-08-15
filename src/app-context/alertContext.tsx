@@ -1,5 +1,5 @@
 import React, { useState, useContext, useCallback, useReducer } from 'react'
-import { Props, Dispatch } from './interface'
+import { PropsAD, Dispatch } from './interface'
 
 interface AlertState {
     shown: boolean
@@ -11,7 +11,8 @@ interface AlertState {
 /**
  * seems as if in React.createContext(defaultValue), the defaultValue is used
  * when there is no AlertContext.Provider value={...}
- * so ideally need to define type of value={...} and pass that into below
+ * so ideally need to define type of value={...} (should be {[key:string]:any}) 
+ * and pass that into below,
  * but always a value={...} so never uses null (the default) anyways
  * https://react-typescript-cheatsheet.netlify.app/docs/basic/getting-started/context/
  */
@@ -54,7 +55,7 @@ const alertReducer = function (state: AlertState, action: Dispatch) {
     }
 }
 
-const AlertProvider = function (props: Props) {
+const AlertProvider = function (props: PropsAD) {
     const [alertState, alertDispatch] = useReducer(alertReducer, stateAlert);
     const [alert, setAlert] = useState({
         shown: false,
@@ -104,4 +105,9 @@ const useAlertContext = function () {
     return useContext(AlertContext);
 }
 
-export { AlertContext, AlertProvider, useAlertContext, useAC }
+export { 
+    AlertContext, 
+    AlertProvider, 
+    useAlertContext, 
+    useAC 
+}

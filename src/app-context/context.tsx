@@ -1,13 +1,13 @@
 import React from 'react';
-import { Props } from './interface'
+import { PropsAD, PropsContext } from './interface'
 
-const ComposeProviders: React.FunctionComponent<Props> = function (props: Props) {
+const ComposeProviders: React.FunctionComponent<PropsContext> = function (props: PropsContext) {
   const { providers, children } = props;
   return (
     <>
-      {providers.reduceRight((accumulator: React.ReactNode, Provider: any) => {
-        console.log(typeof Provider) // is a function
-        // Provider: (props: Props) => React.ReactNode
+      {providers.reduceRight((accumulator: React.ReactNode, Provider: (props: PropsAD) => JSX.Element) => {
+        console.log(typeof Provider) // is a function (props: PropsAD) => JSX.Element
+        // Provider: (props: PropsAD) => JSX.Element
         // accumulator is nested tree of components so falls under React.ReactNode
         return <Provider>{accumulator}</Provider>
       }, children)}

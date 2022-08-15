@@ -3,11 +3,15 @@ import ReactDOM from 'react-dom/client';
 import './index.css';
 import App from './App';
 // import reportWebVitals from './reportWebVitals';
-import { AlertProvider } from './app-context/alertContext.tsx';
+import { AlertProvider } from './app-context/alertContext';
 import { DashboardProvider } from './app-context/dashboardContext';
-import ComposeProviders from './app-context/context.tsx';
+import ComposeProviders from './app-context/context';
 
-const root = ReactDOM.createRoot(document.getElementById('root'));
+const element = document.getElementById('root');
+if (!element) {
+  throw new Error('oops couldn\'t even get HTMLElement')
+}
+const root = ReactDOM.createRoot(element);
 root.render(
   <React.StrictMode>
     {/* right most in array below is most nested; need alerts for dashboardContext */}

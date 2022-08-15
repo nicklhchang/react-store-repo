@@ -1,6 +1,6 @@
 import React, { useRef, useEffect } from 'react'
 import { useDashboardContext } from '../app-context/dashboardContext';
-import { useAlertContext } from '../app-context/alertContext.tsx';
+import { useAlertContext } from '../app-context/alertContext';
 import SessionOver from '../components/SessionOver';
 
 import axios, { } from 'axios';
@@ -14,13 +14,14 @@ axios.defaults.withCredentials = true; // always send cookie to backend because 
  */
 const Welcome = function () {
   const {
+    loading,
     setLoading,
     isAuthenticated,
     localCart,
     loadCart
   } = useDashboardContext();
   const { alert } = useAlertContext();
-  const cart = useRef(localCart); cart.current = localCart;
+  const cart = useRef<{ [key: string]: number }>(localCart); cart.current = localCart;
 
   useEffect(() => {
     // fetch user cart and prices or bug when going straight to Menu and adding without visiting Cart
@@ -35,12 +36,13 @@ const Welcome = function () {
   return (
     <section>
       {alert.shown && <Alert />}
-      <SessionOver />
+      {!isAuthenticated && !loading && <SessionOver />}
+      {/* {console.log(isAuthenticated)} */}
       {isAuthenticated &&
         <div>
           <p>
             squish the window sideways (horizontally) ;{`)`}. just keep squishing.
-            
+
             this project uses code splitting (for prod) and memoization as optimizations
           </p>
           <p>

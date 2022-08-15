@@ -1,11 +1,12 @@
 import React, { useState, useContext, useCallback, useReducer } from 'react'
 import { authReducer, sidebarReducer, cartReducer } from './dashboardReducer';
 import { useAlertContext } from './alertContext';
-import { Props } from './interface'
+import { PropsAD } from './interface'
 
 import axios, { CanceledError, CancelTokenSource } from 'axios'
 axios.defaults.withCredentials = true; // always send cookie to backend because passport wants
 
+// const DashboardContext = React.createContext({} as any);
 // https://react-typescript-cheatsheet.netlify.app/docs/basic/getting-started/context/
 const customCreateContext = function <T extends {} | null>() {
   const dashboardCtx = React.createContext<T | undefined>(undefined);
@@ -19,7 +20,7 @@ const customCreateContext = function <T extends {} | null>() {
   }
   return [useCtx, dashboardCtx] as const
 }
-const [useDC, DashboardContext] = customCreateContext<any>()
+const [useDC, DashboardContext] = customCreateContext<any>();
 
 const stateAuthUser = {
   isAuthenticated: false,
@@ -45,7 +46,7 @@ const stateCart = {
   isCartLocked: false
 }
 
-const DashboardProvider = function (props: Props) {
+const DashboardProvider = function (props: PropsAD) {
   // no useRef's because want re renders whenever these states change
   const [loading, setLoading] = useState(true);
   const [wholeMenu, setWholeMenu] = useState([]);
@@ -173,7 +174,6 @@ const DashboardProvider = function (props: Props) {
     }
   }, [unauthenticate, mutateLocalCart, setCustomAlert])
 
-  // @
   const uploadLocalCart = useCallback(function (source: CancelTokenSource, cslu: {[key:string]:number}, cart: {[key:string]:number}) {
     const notChanged = Object.values(cslu)
       .every((change) => { return change === 0; });
@@ -254,4 +254,8 @@ const useDashboardContext = function () {
   return useContext(DashboardContext);
 }
 
-export { useDashboardContext, DashboardProvider, useDC }
+export { 
+  useDashboardContext, 
+  DashboardProvider, 
+  useDC 
+}

@@ -10,6 +10,7 @@ axios.defaults.withCredentials = true;
 
 const Cart = function () {
   const {
+    loading,
     setLoading,
     itemPrices,
     isAuthenticated,
@@ -33,7 +34,7 @@ const Cart = function () {
   return (
     <section>
       {alert.shown && <Alert />}
-      <SessionOver />
+      {!isAuthenticated && !loading && <SessionOver />}
       {isAuthenticated && <section>
         {!Object.keys(localCart).length &&
           <section>
